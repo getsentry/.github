@@ -10,6 +10,6 @@ https://forum.sentry.io/
 Chat online with other Sentry users:
 https://discord.gg/Ww9hbqr
 
-Using sentry.io? You can also reach out to the Support:
+For paying customers of sentry.io, there's also technical support:
 https://sentry.io/contact/support/
 -->
