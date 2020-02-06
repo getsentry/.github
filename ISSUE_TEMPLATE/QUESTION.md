@@ -1,7 +1,7 @@
 <!--
 You can have your question reach the wider Sentry community via:
 
-Stackoverflow.com Use the Sentry tag:
+StackOverflow.com with the Sentry tag:
 https://stackoverflow.com/questions/ask
 
 Sentry forum is also a great knowledge base:
