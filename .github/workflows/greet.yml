@@ -1,0 +1,14 @@
+name: Greet
+on:
+  workflow_dispatch:
+defaults:
+  run:
+    shell: bash
+jobs:
+  greet:
+    name: "greet"
+    runs-on: ubuntu-latest
+    steps:
+    - name: "Greet"
+      shell: bash
+      run: echo "Greetings, program!"
