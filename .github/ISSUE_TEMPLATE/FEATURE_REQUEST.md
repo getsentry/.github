@@ -3,7 +3,16 @@ name: 🧠 Feature Request
 about: Suggest an idea for improving this repo
 ---
 
-<!--
-Please provide some context on what problem you are trying to solve and how this feature is going to help.
+### Summary
 
--->
+One paragraph description of the feature.
+
+### Motivation
+
+Why should this be worked on? What problems or use cases does it solve or
+improve?
+
+### Additional Context
+
+Any other context or screenshots or API request payload/responses that
+pertain to the feature.
