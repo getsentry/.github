@@ -12,6 +12,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ github.token }}
       run: |
+        echo "Validating issue #${{ github.event.issue.number }}."
 
         # Trust users who belong to the getsentry org.
         if gh api "https://api.github.com/orgs/getsentry/members/${{ github.actor }}" >/dev/null 2>&1; then
