@@ -1,3 +1,8 @@
+---
+name: 🐞 Bug Report
+about: Report a bug in this repo
+---
+
 <!--
 Please consider including the answers below when relevant:
 
