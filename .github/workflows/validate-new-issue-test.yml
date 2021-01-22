@@ -4,63 +4,85 @@ on:
 env:
   GITHUB_TOKEN: ${{ secrets.PAT }}
 jobs:
-  validate-new-issue-test:
+  _1:
+    name: "It skips validation for Sentry org members."
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: "It skips validation for Sentry org members."
+    - name: test
       run: |
-        set -euo pipefail
-
         issue_number=$(
           basename $(
             gh issue create --title "Greetings, program!" --body "This is an issue, clearly."
           )
         )
-        echo "Checking issue #${issue_number}."
+        .github/workflows/test-helpers/get-issue-validation-log "${issue_number}"
+        grep "Skipping validation" log
+  _2:
+    name: "It runs non-member issues through validation."
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - id: setup
+      name: setup
+      env:
+        GITHUB_TOKEN: ${{ secrets.PAT_NONMEMBER }}
+      run: |  
+        issue_number=$(
+          basename $(
+            gh issue create --title "Greetings, program!" \
+              --body "
+        ### Environment
 
-        function download-logs {
-          echo "Downloading and extracting the log for the validation workflow run."
-          rm -rf log.zip log
-          run_id=$(
-            gh api "repos/:owner/:repo/actions/workflows/validate-new-issue.yml/runs" \
-              | jq '.workflow_runs[0].id'
+        foo
+
+        ### Steps to Reproduce
+
+        bar
+
+        ### Expected Result
+
+        buz
+
+        ### Actual Result
+
+        blah
+        "
           )
-          if [ -z "$run_id" ]; then
-            echo "No run_id."
-            return 1
-          fi
-          gh api "repos/:owner/:repo/actions/runs/${run_id}/logs" > log.zip
-          if [ $? -gt 0 ]; then
-            echo "Bad log.zip?"
-            return 1
-          fi
-          logfile="validate-new-issue/3_Validate issue against templates.txt"
-          unzip log.zip "$logfile"
-          mv "$logfile" log
-          rm -rf validate-new-issue
-          rm log.zip
-          echo "Are we looking at the right issue?"
-          expected="${issue_number}"
-          actual=$(grep 'Validating issue #[0-9]*\.[^"]' log | sed -Ee 's/.*#([0-9]*)\..*/\1/')
-          echo "Expected: ${expected}"
-          echo "Actual:   ${actual}"
-          test $actual = $expected
-        }
-
-        function backoff {
-          echo "Trying $1 several times with backoff ..."
-          for i in {0..6}; do
-            [ $i -gt 0 ] && sleep $(( 2 ** $i ))
-            echo "::group::Trying $1 ..."
-            $1 && echo "::endgroup::" && return
-            echo "::endgroup::"
-          done
-          echo "$1 backed right off the edge! 😧"
-          exit 1
-        }
-
-        backoff download-logs
-        echo "Logs downloaded successfully, proceeding to test."
-
-        grep "Skipping validation" log > /dev/null
+        )
+        echo "::set-output name=issue_number::${issue_number}"
+    - name: test
+      run: |
+        issue_number="${{ steps.setup.outputs.issue_number }}"
+        .github/workflows/test-helpers/get-issue-validation-log "${issue_number}"
+        grep "sentry-test-fixture-nonmember is not a member of the getsentry org." log
+        grep "BUG_REPORT.md? 👍 💃" log
+  _3:
+    name: "It is flexible about header order and extra headers."
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - id: setup
+      name: setup
+      env:
+        GITHUB_TOKEN: ${{ secrets.PAT_NONMEMBER }}
+      run: |  
+        issue_number=$(
+          basename $(
+            gh issue create --title "Greetings, program!" \
+              --body "
+        ### Preamble
+        ### Steps to Reproduce
+        ### Expected Result
+        ### Actual Result
+        ### Environment
+        ### Postamble
+        "
+          )
+        )
+        echo "::set-output name=issue_number::${issue_number}"
+    - name: test
+      run: |
+        issue_number="${{ steps.setup.outputs.issue_number }}"
+        .github/workflows/test-helpers/get-issue-validation-log "${issue_number}"
+        grep "BUG_REPORT.md? 👍 💃" log

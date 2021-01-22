@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+function download-and-extract {
+  issue_number="$1"
+  echo "Determining workflow run ID for issue #${issue_number} ..."
+
+  rm -rf log.zip log
+  run_id=$(
+    gh api "repos/:owner/:repo/actions/workflows/validate-new-issue.yml/runs" \
+      | jq ".workflow_runs[] 
+            | select((.event==\"issues\") and (.run_number==$(( issue_number - 1 )))) 
+            | .id"
+  )
+  if [ -z "$run_id" ]; then
+    echo "No run_id."
+    return 1
+  fi
+  echo "Downloading logs for workflow run ${run_id} ..."
+  gh api "repos/:owner/:repo/actions/runs/${run_id}/logs" > log.zip
+  if [ $? -gt 0 ]; then
+    echo "Trouble downloading?"
+    return 1
+  fi
+  echo "Extracting validation log ..."
+  logfile="validate-new-issue/3_Validate issue against templates.txt"
+  unzip log.zip "$logfile"
+  # Strip initial echo of whole run body. https://unix.stackexchange.com/a/218144
+  { sed -ne'/##\[endgroup]/q;H;1h;$!d;x;p'; cat; } < "$logfile" > log
+  rm "$logfile"
+  rm -rf validate-new-issue
+  rm log.zip
+  echo "Are we indeed looking at the right issue?"
+  expected="${issue_number}"
+  actual=$(grep 'Validating issue #[0-9]*\.[^"]' log | sed -Ee 's/.*#([0-9]*)\..*/\1/')
+  echo "Expected: ${expected}"
+  echo "Actual:   ${actual}"
+  test $actual = $expected
+}
+
+function backoff {
+  echo "Trying $1 several times with backoff ..."
+  for i in {0..6}; do
+    [ $i -gt 0 ] && sleep $(( 2 ** $i ))
+    echo "::group::Trying $1 ..."
+    $1 $2 && echo "::endgroup::" && return
+    echo "::endgroup::"
+  done
+  echo "$1 backed right off the edge! 😧"
+  exit 1
+}
+
+echo "Downloading and extracting the validation workflow run log for issue #$1."
+backoff download-and-extract "$1"
+echo "Log downloaded and extracted successfully."
+echo "::group::log"
+cat log
+echo "::endgroup::"
