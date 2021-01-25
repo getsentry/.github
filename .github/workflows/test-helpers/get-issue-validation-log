@@ -9,7 +9,9 @@ function download-and-extract {
   # zero-indexed whereas issue number is one-indexed). I'm not seeing this
   # actually documented anywhere so it could be that this breaks at some point.
   # If/when that happens, we should notice due to the hard check at the end of
-  # this function.
+  # this function, and at that point I guess we'll need to fall back on a
+  # clunkier strategy of downloading and inspecting the log for each run until
+  # we find the issue number.
 
   rm -rf log.zip log
   run_id=$(
