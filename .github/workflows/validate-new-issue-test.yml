@@ -4,7 +4,7 @@ on:
 env:
   GITHUB_TOKEN: ${{ secrets.PAT }}
 jobs:
-  _1:
+  case_1:
     name: "It skips validation for Sentry org members."
     runs-on: ubuntu-latest
     steps:
@@ -18,7 +18,7 @@ jobs:
         )
         .github/workflows/test-helpers/get-issue-validation-log "${issue_number}"
         grep "Skipping validation" log
-  _2:
+  case_2:
     name: "It runs non-member issues through validation."
     runs-on: ubuntu-latest
     steps:
@@ -57,7 +57,7 @@ jobs:
         .github/workflows/test-helpers/get-issue-validation-log "${issue_number}"
         grep "sentry-test-fixture-nonmember is not a member of the getsentry org." log
         grep "BUG_REPORT.md? 👍 💃" log
-  _3:
+  case_3:
     name: "It is flexible about header order and extra headers."
     runs-on: ubuntu-latest
     steps:
