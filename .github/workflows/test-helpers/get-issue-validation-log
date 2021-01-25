@@ -5,6 +5,12 @@ function download-and-extract {
   issue_number="$1"
   echo "Determining workflow run ID for issue #${issue_number} ..."
 
+  # It seems that for issues, run_number equals issue_number - 1 (i.e., it's
+  # zero-indexed whereas issue number is one-indexed). I'm not seeing this
+  # actually documented anywhere so it could be that this breaks at some point.
+  # If/when that happens, we should notice due to the hard check at the end of
+  # this function.
+
   rm -rf log.zip log
   run_id=$(
     gh api "repos/:owner/:repo/actions/workflows/validate-new-issue.yml/runs" \
