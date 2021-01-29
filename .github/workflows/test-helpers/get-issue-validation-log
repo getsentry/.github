@@ -61,6 +61,6 @@ function backoff {
 echo "Downloading and extracting the validation workflow run log for issue #$1."
 backoff download-and-extract "$1"
 echo "Log downloaded and extracted successfully."
-echo "::group::log"
+echo "::group::Log:"
 cat log
 echo "::endgroup::"
