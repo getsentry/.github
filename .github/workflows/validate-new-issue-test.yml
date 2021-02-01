@@ -116,4 +116,4 @@ jobs:
         set -x
         grep 'BUG_REPORT.md? No match. 👎' log
         grep 'FEATURE_REQUEST.md? No headers in template. 🤷' log
-        grep 'Commented: "https://github.com/${{ github.repository }}' log
+        grep 'Commented: https://github.com/${{ github.repository }}' log
