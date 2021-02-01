@@ -21,6 +21,7 @@ jobs:
         grep "Skipping validation" log
   case_2:
     name: "It runs non-member issues through validation."
+    needs: case_1
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -61,6 +62,7 @@ jobs:
         grep "BUG_REPORT.md? Match! 👍 💃" log
   case_3:
     name: "It is flexible about header order and extra headers."
+    needs: case_2
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -91,6 +93,7 @@ jobs:
         grep "BUG_REPORT.md? Match! 👍 💃" log
   case_4:
     name: "It closes invalid issues with a comment."
+    needs: case_3
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
