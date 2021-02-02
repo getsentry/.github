@@ -27,7 +27,7 @@ function download-and-extract {
     return 1
   fi
   echo "Extracting validation log ..."
-  logfile="validate-new-issue/3_Validate issue against templates.txt"
+  logfile="validate-new-issue/3_Validate new issue.txt"
   unzip log.zip "$logfile"
   # Strip initial echo of whole run body. https://unix.stackexchange.com/a/218144
   { sed -ne'/##\[endgroup]/q;H;1h;$!d;x;p'; cat; } < "$logfile" > log

@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: "Validate issue against templates"
+      - name: "Validate new issue"
         shell: bash
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -22,11 +22,17 @@ jobs:
             echo "${{ github.actor }} is not a member of the getsentry org. 🧐"
           fi
 
-          # Look for a template where all the headings are also in this issue.
-          # - extra headings in the issue are fine
-          # - order doesn't matter
-          # - case-sensitive tho
-          # - can't post a template unchanged (ignoring whitespace)
+          # Prep reasons for error message comment.
+          REASON="your issue does not properly use one of this repo's available issue templates"
+          REASON_EXACT_MATCH="you created an issue from a template without filling in anything"
+
+          # Definition of valid:
+          # - matches a template
+          #   - all the headings are also in this issue
+          #   - extra headings in the issue are fine
+          #   - order doesn't matter
+          #   - case-sensitive tho
+          # - not an *exact* match for a template (ignoring whitespace)
           function extract-headings { { sed 's/\r$//' "$1" | grep '^#' || echo -n ''; } | sort; }
           jq -r .issue.body "$GITHUB_EVENT_PATH" > issue
           extract-headings <(cat issue) > headings-in-issue
@@ -41,6 +47,7 @@ jobs:
               echo "Match! 👍 💃"
               if diff -Bw "$template" issue > /dev/null; then
                 echo "... like, an /exact/ match. 😖"
+                REASON="${REASON_EXACT_MATCH}"
                 break
               else
                 exit 0
@@ -50,9 +57,9 @@ jobs:
             fi
           done
 
-          # Failed to find a match! Close the issue.
+          # Failed validation! Close the issue with a comment.
           cat << EOF > comment
-          Sorry, friend. As far as this ol' bot can tell, your issue does not use one of this repo's available issue templates. Please [try again using a template](https://github.com/${{ github.repository }}/issues/new/choose) so that we have the best chance of understanding and addressing your issue. (And if I'm confused, please [let us know](https://github.com/getsentry/.github/issues/new?title=template+enforcer+is+confused&body=${{ github.event.issue.html_url }}). 😬)
+          Sorry, friend. As far as this ol' bot can tell, ${REASON}. Please [try again](https://github.com/${{ github.repository }}/issues/new/choose), if you like. (And if I'm confused, please [let us know](https://github.com/getsentry/.github/issues/new?title=template+enforcer+is+confused&body=${{ github.event.issue.html_url }}). 😬)
 
           ----
 
@@ -64,3 +71,4 @@ jobs:
           echo -n "Commented: "
           gh issue comment ${{ github.event.issue.number }} --body "$(cat comment)"
           gh issue close ${{ github.event.issue.number }}
+          echo "Closed with: \"${REASON}.\""

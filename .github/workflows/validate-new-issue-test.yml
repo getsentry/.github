@@ -117,6 +117,7 @@ jobs:
           grep 'BUG_REPORT.md? No match. 👎' log
           grep 'FEATURE_REQUEST.md? No headers in template. 🤷' log
           grep 'Commented: https://github.com/${{ github.repository }}' log
+          grep "Closed with: .* does not properly use" log
   case_5:
     name: "It considers exact matches to be invalid."
     needs: case_4
@@ -142,7 +143,7 @@ jobs:
           set -x
           grep "BUG_REPORT.md? Match! 👍 💃" log
           grep "... like, an /exact/ match. 😖" log
-          grep 'Commented: https://github.com/${{ github.repository }}' log
+          grep "Closed with: .* without filling in anything" log
   case_6:
     name: "It doesn't care about CRLF line endings."
     needs: case_5
@@ -166,6 +167,4 @@ jobs:
           issue_number="${{ steps.setup.outputs.issue_number }}"
           .github/workflows/test-helpers/get-issue-validation-log "${issue_number}"
           set -x
-          grep "BUG_REPORT.md? Match! 👍 💃" log
-          grep "... like, an /exact/ match. 😖" log
-          grep 'Commented: https://github.com/${{ github.repository }}' log
+          grep "Closed with: .* without filling in anything" log
