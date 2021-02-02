@@ -56,7 +56,9 @@ jobs:
 
           ----
 
-          [![Did you see the memo about this?](https://user-images.githubusercontent.com/134455/104515469-e04a9c80-55c0-11eb-8e15-ffe9c0b8dd7f.gif)](https://www.youtube.com/watch?v=Fy3rjQGc6lA)"
+          [![Did you see the memo about this?](https://user-images.githubusercontent.com/134455/104515469-e04a9c80-55c0-11eb-8e15-ffe9c0b8dd7f.gif)](https://www.youtube.com/watch?v=Fy3rjQGc6lA)
+
+          ([log](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}))
           EOF
 
           echo -n "Commented: "

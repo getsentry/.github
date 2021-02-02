@@ -105,7 +105,7 @@ jobs:
           issue_number=$(
             basename $(
               gh issue create --title "Greetings, program!" \
-                --body "# Foo\nI don't follow directions."
+                --body "I don't follow directions."
             )
           )
           echo "::set-output name=issue_number::${issue_number}"

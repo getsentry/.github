@@ -39,7 +39,7 @@ function download-and-extract {
   actual=$(grep 'Validating issue #[0-9]*\.[^"]' log | sed -Ee 's/.*#([0-9]*)\..*/\1/')
   echo "Expected: ${expected}"
   echo "Actual:   ${actual}"
-  test $actual = $expected
+  test "$actual" = "$expected"
 }
 
 function backoff {
