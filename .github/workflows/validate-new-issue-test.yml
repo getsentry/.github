@@ -168,3 +168,27 @@ jobs:
           .github/workflows/test-helpers/get-issue-validation-log "${issue_number}"
           set -x
           grep "Closed with: .* without filling in anything" log
+  case_7:
+    name: "It considers empty issues to be invalid."
+    needs: case_6
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - id: setup
+        name: setup
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_NONMEMBER }}
+        run: |
+          issue_number=$(
+            basename $(
+              gh issue create --title "Greetings, program!" \
+                --body "        "
+            )
+          )
+          echo "::set-output name=issue_number::${issue_number}"
+      - name: test
+        run: |
+          issue_number="${{ steps.setup.outputs.issue_number }}"
+          .github/workflows/test-helpers/get-issue-validation-log "${issue_number}"
+          set -x
+          grep "Closed with: .* created an empty issue" log
