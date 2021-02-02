@@ -157,7 +157,7 @@ jobs:
           issue_number=$(
             basename $(
               gh issue create --title "Greetings, program!" \
-                --body "$(sed '1{/^---$/!q;};1,/^---$/d;s/\n$/\r\n/' '.github/ISSUE_TEMPLATE/BUG_REPORT.md')"
+                --body "$(sed '1{/^---$/!q;};1,/^---$/d;s/$/\r/' '.github/ISSUE_TEMPLATE/BUG_REPORT.md')"
             )
           )
           echo "::set-output name=issue_number::${issue_number}"
