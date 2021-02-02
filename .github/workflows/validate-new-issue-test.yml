@@ -119,7 +119,7 @@ jobs:
           grep 'Commented: https://github.com/${{ github.repository }}' log
   case_5:
     name: "It considers exact matches to be invalid."
-    needs: case_5
+    needs: case_4
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -145,7 +145,7 @@ jobs:
           grep 'Commented: https://github.com/${{ github.repository }}' log
   case_6:
     name: "It doesn't care about CRLF line endings."
-    needs: case_6
+    needs: case_5
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
