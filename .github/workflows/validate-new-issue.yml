@@ -52,10 +52,13 @@ jobs:
 
           # Failed to find a match! Close the issue.
           cat << EOF > comment
-          {"body": "Sorry, friend. As far as this ol' bot can tell, your issue does not use one of this repo's available issue templates. Please [try again using a template](https://github.com/${{ github.repository }}/issues/new/choose) so that we have the best chance of understanding and addressing your issue. (And if I'm confused, please [let us know](https://github.com/getsentry/.github/issues/new?title=template+enforcer+is+confused&body=${{ github.event.issue.html_url }}). 😬)\n\n----\n\n[![Did you see the memo about this?](https://user-images.githubusercontent.com/134455/104515469-e04a9c80-55c0-11eb-8e15-ffe9c0b8dd7f.gif)](https://www.youtube.com/watch?v=Fy3rjQGc6lA)"}
+          Sorry, friend. As far as this ol' bot can tell, your issue does not use one of this repo's available issue templates. Please [try again using a template](https://github.com/${{ github.repository }}/issues/new/choose) so that we have the best chance of understanding and addressing your issue. (And if I'm confused, please [let us know](https://github.com/getsentry/.github/issues/new?title=template+enforcer+is+confused&body=${{ github.event.issue.html_url }}). 😬)
+
+          ----
+
+          [![Did you see the memo about this?](https://user-images.githubusercontent.com/134455/104515469-e04a9c80-55c0-11eb-8e15-ffe9c0b8dd7f.gif)](https://www.youtube.com/watch?v=Fy3rjQGc6lA)"
           EOF
 
-          # Might get `gh issue comment` some day - https://github.com/cli/cli/issues/517
           echo -n "Commented: "
           gh issue comment ${{ github.event.issue.number }} --body "$(cat comment)"
           gh issue close ${{ github.event.issue.number }}
