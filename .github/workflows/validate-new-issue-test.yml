@@ -8,138 +8,138 @@ jobs:
     name: "It skips validation for Sentry org members."
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - name: test
-      run: |
-        issue_number=$(
-          basename $(
-            gh issue create --title "Greetings, program!" --body "This is an issue, clearly."
+      - uses: actions/checkout@v2
+      - name: test
+        run: |
+          issue_number=$(
+            basename $(
+              gh issue create --title "Greetings, program!" --body "This is an issue, clearly."
+            )
           )
-        )
-        .github/workflows/test-helpers/get-issue-validation-log "${issue_number}"
-        set -x
-        grep "Skipping validation" log
+          .github/workflows/test-helpers/get-issue-validation-log "${issue_number}"
+          set -x
+          grep "Skipping validation" log
   case_2:
     name: "It runs non-member issues through validation."
     needs: case_1
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - id: setup
-      name: setup
-      env:
-        GITHUB_TOKEN: ${{ secrets.PAT_NONMEMBER }}
-      run: |  
-        issue_number=$(
-          basename $(
-            gh issue create --title "Greetings, program!" \
-              --body "
-        ### Environment
+      - uses: actions/checkout@v2
+      - id: setup
+        name: setup
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_NONMEMBER }}
+        run: |
+          issue_number=$(
+            basename $(
+              gh issue create --title "Greetings, program!" \
+                --body "
+          ### Environment
 
-        foo
+          foo
 
-        ### Steps to Reproduce
+          ### Steps to Reproduce
 
-        bar
+          bar
 
-        ### Expected Result
+          ### Expected Result
 
-        buz
+          buz
 
-        ### Actual Result
+          ### Actual Result
 
-        blah
-        "
+          blah
+          "
+            )
           )
-        )
-        echo "::set-output name=issue_number::${issue_number}"
-    - name: test
-      run: |
-        issue_number="${{ steps.setup.outputs.issue_number }}"
-        .github/workflows/test-helpers/get-issue-validation-log "${issue_number}"
-        set -x
-        grep "sentry-test-fixture-nonmember is not a member of the getsentry org." log
-        grep "BUG_REPORT.md? Match! 👍 💃" log
+          echo "::set-output name=issue_number::${issue_number}"
+      - name: test
+        run: |
+          issue_number="${{ steps.setup.outputs.issue_number }}"
+          .github/workflows/test-helpers/get-issue-validation-log "${issue_number}"
+          set -x
+          grep "sentry-test-fixture-nonmember is not a member of the getsentry org." log
+          grep "BUG_REPORT.md? Match! 👍 💃" log
   case_3:
     name: "It is flexible about header order and extra headers."
     needs: case_2
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - id: setup
-      name: setup
-      env:
-        GITHUB_TOKEN: ${{ secrets.PAT_NONMEMBER }}
-      run: |  
-        issue_number=$(
-          basename $(
-            gh issue create --title "Greetings, program!" \
-              --body "
-        ### Preamble
-        ### Steps to Reproduce
-        ### Expected Result
-        ### Actual Result
-        ### Environment
-        ### Postamble
-        "
+      - uses: actions/checkout@v2
+      - id: setup
+        name: setup
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_NONMEMBER }}
+        run: |
+          issue_number=$(
+            basename $(
+              gh issue create --title "Greetings, program!" \
+                --body "
+          ### Preamble
+          ### Steps to Reproduce
+          ### Expected Result
+          ### Actual Result
+          ### Environment
+          ### Postamble
+          "
+            )
           )
-        )
-        echo "::set-output name=issue_number::${issue_number}"
-    - name: test
-      run: |
-        issue_number="${{ steps.setup.outputs.issue_number }}"
-        .github/workflows/test-helpers/get-issue-validation-log "${issue_number}"
-        set -x
-        grep "BUG_REPORT.md? Match! 👍 💃" log
+          echo "::set-output name=issue_number::${issue_number}"
+      - name: test
+        run: |
+          issue_number="${{ steps.setup.outputs.issue_number }}"
+          .github/workflows/test-helpers/get-issue-validation-log "${issue_number}"
+          set -x
+          grep "BUG_REPORT.md? Match! 👍 💃" log
   case_4:
     name: "It closes invalid issues with a comment."
     needs: case_3
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - id: setup
-      name: setup
-      env:
-        GITHUB_TOKEN: ${{ secrets.PAT_NONMEMBER }}
-      run: |
-        issue_number=$(
-          basename $(
-            gh issue create --title "Greetings, program!" \
-              --body "# Foo\nI don't follow directions."
+      - uses: actions/checkout@v2
+      - id: setup
+        name: setup
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_NONMEMBER }}
+        run: |
+          issue_number=$(
+            basename $(
+              gh issue create --title "Greetings, program!" \
+                --body "# Foo\nI don't follow directions."
+            )
           )
-        )
-        echo "::set-output name=issue_number::${issue_number}"
-    - name: test
-      run: |
-        issue_number="${{ steps.setup.outputs.issue_number }}"
-        .github/workflows/test-helpers/get-issue-validation-log "${issue_number}"
-        set -x
-        grep 'BUG_REPORT.md? No match. 👎' log
-        grep 'FEATURE_REQUEST.md? No headers in template. 🤷' log
-        grep 'Commented: https://github.com/${{ github.repository }}' log
+          echo "::set-output name=issue_number::${issue_number}"
+      - name: test
+        run: |
+          issue_number="${{ steps.setup.outputs.issue_number }}"
+          .github/workflows/test-helpers/get-issue-validation-log "${issue_number}"
+          set -x
+          grep 'BUG_REPORT.md? No match. 👎' log
+          grep 'FEATURE_REQUEST.md? No headers in template. 🤷' log
+          grep 'Commented: https://github.com/${{ github.repository }}' log
   case_5:
     name: "It considers exact matches to be invalid."
     needs: case_4
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - id: setup
-      name: setup
-      env:
-        GITHUB_TOKEN: ${{ secrets.PAT_NONMEMBER }}
-      run: |
-        issue_number=$(
-          basename $(
-            gh issue create --title "Greetings, program!" \
-              --body "$(sed '1{/^---$/!q;};1,/^---$/d' '.github/ISSUE_TEMPLATE/BUG_REPORT.md')"
+      - uses: actions/checkout@v2
+      - id: setup
+        name: setup
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_NONMEMBER }}
+        run: |
+          issue_number=$(
+            basename $(
+              gh issue create --title "Greetings, program!" \
+                --body "$(sed '1{/^---$/!q;};1,/^---$/d' '.github/ISSUE_TEMPLATE/BUG_REPORT.md')"
+            )
           )
-        )
-        echo "::set-output name=issue_number::${issue_number}"
-    - name: test
-      run: |
-        issue_number="${{ steps.setup.outputs.issue_number }}"
-        .github/workflows/test-helpers/get-issue-validation-log "${issue_number}"
-        set -x
-        grep "BUG_REPORT.md? Match! 👍 💃" log
-        grep "... like, an /exact/ match. 😖" log
-        grep 'Commented: https://github.com/${{ github.repository }}' log
+          echo "::set-output name=issue_number::${issue_number}"
+      - name: test
+        run: |
+          issue_number="${{ steps.setup.outputs.issue_number }}"
+          .github/workflows/test-helpers/get-issue-validation-log "${issue_number}"
+          set -x
+          grep "BUG_REPORT.md? Match! 👍 💃" log
+          grep "... like, an /exact/ match. 😖" log
+          grep 'Commented: https://github.com/${{ github.repository }}' log
