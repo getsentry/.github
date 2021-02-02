@@ -119,7 +119,7 @@ jobs:
           grep 'Commented: https://github.com/${{ github.repository }}' log
   case_5:
     name: "It considers exact matches to be invalid."
-    needs: case_4
+    needs: case_5
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -132,6 +132,32 @@ jobs:
             basename $(
               gh issue create --title "Greetings, program!" \
                 --body "$(sed '1{/^---$/!q;};1,/^---$/d' '.github/ISSUE_TEMPLATE/BUG_REPORT.md')"
+            )
+          )
+          echo "::set-output name=issue_number::${issue_number}"
+      - name: test
+        run: |
+          issue_number="${{ steps.setup.outputs.issue_number }}"
+          .github/workflows/test-helpers/get-issue-validation-log "${issue_number}"
+          set -x
+          grep "BUG_REPORT.md? Match! 👍 💃" log
+          grep "... like, an /exact/ match. 😖" log
+          grep 'Commented: https://github.com/${{ github.repository }}' log
+  case_6:
+    name: "It doesn't care about CRLF line endings."
+    needs: case_6
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - id: setup
+        name: setup
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_NONMEMBER }}
+        run: |
+          issue_number=$(
+            basename $(
+              gh issue create --title "Greetings, program!" \
+                --body "$(sed '1{/^---$/!q;};1,/^---$/d;s/\n$/\r\n/' '.github/ISSUE_TEMPLATE/BUG_REPORT.md')"
             )
           )
           echo "::set-output name=issue_number::${issue_number}"
