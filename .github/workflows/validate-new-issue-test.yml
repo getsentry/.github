@@ -16,9 +16,10 @@ jobs:
               gh issue create --title "Greetings, program!" --body "This is an issue, clearly."
             )
           )
-          .github/workflows/test-helpers/get-issue-validation-log "${issue_number}"
+          .github/workflows/test-helpers/wait-for-issue "${issue_number}"
           set -x
-          grep "Skipping validation" log
+          test "$(cat issue-state)" = "open"
+          test "$(cat issue-ncomments)" = "0"
   case_2:
     name: "It runs non-member issues through validation."
     needs: case_1
@@ -56,10 +57,10 @@ jobs:
       - name: test
         run: |
           issue_number="${{ steps.setup.outputs.issue_number }}"
-          .github/workflows/test-helpers/get-issue-validation-log "${issue_number}"
+          .github/workflows/test-helpers/wait-for-issue "${issue_number}"
           set -x
-          grep "sentry-test-fixture-nonmember is not a member of the getsentry org." log
-          grep "BUG_REPORT.md? Match! 👍 💃" log
+          test "$(cat issue-state)" = "open"
+          test "$(cat issue-ncomments)" = "0"
   case_3:
     name: "It is flexible about header order and extra headers."
     needs: case_2
@@ -88,9 +89,10 @@ jobs:
       - name: test
         run: |
           issue_number="${{ steps.setup.outputs.issue_number }}"
-          .github/workflows/test-helpers/get-issue-validation-log "${issue_number}"
+          .github/workflows/test-helpers/wait-for-issue "${issue_number}"
           set -x
-          grep "BUG_REPORT.md? Match! 👍 💃" log
+          test "$(cat issue-state)" = "open"
+          test "$(cat issue-ncomments)" = "0"
   case_4:
     name: "It closes invalid issues with a comment."
     needs: case_3
@@ -112,12 +114,10 @@ jobs:
       - name: test
         run: |
           issue_number="${{ steps.setup.outputs.issue_number }}"
-          .github/workflows/test-helpers/get-issue-validation-log "${issue_number}"
+          .github/workflows/test-helpers/wait-for-issue "${issue_number}"
           set -x
-          grep 'BUG_REPORT.md? No match. 👎' log
-          grep 'FEATURE_REQUEST.md? No headers in template. 🤷' log
-          grep 'Commented: https://github.com/${{ github.repository }}' log
-          grep "Closed with: .* does not properly use" log
+          test "$(cat issue-state)" = "closed"
+          grep "does not properly use" issue-comment
   case_5:
     name: "It considers exact matches to be invalid."
     needs: case_4
@@ -139,11 +139,10 @@ jobs:
       - name: test
         run: |
           issue_number="${{ steps.setup.outputs.issue_number }}"
-          .github/workflows/test-helpers/get-issue-validation-log "${issue_number}"
+          .github/workflows/test-helpers/wait-for-issue "${issue_number}"
           set -x
-          grep "BUG_REPORT.md? Match! 👍 💃" log
-          grep "... like, an /exact/ match. 😖" log
-          grep "Closed with: .* without filling in anything" log
+          test "$(cat issue-state)" = "closed"
+          grep "without filling in anything" issue-comment
   case_6:
     name: "It doesn't care about CRLF line endings."
     needs: case_5
@@ -165,9 +164,10 @@ jobs:
       - name: test
         run: |
           issue_number="${{ steps.setup.outputs.issue_number }}"
-          .github/workflows/test-helpers/get-issue-validation-log "${issue_number}"
+          .github/workflows/test-helpers/wait-for-issue "${issue_number}"
           set -x
-          grep "Closed with: .* without filling in anything" log
+          test "$(cat issue-state)" = "closed"
+          grep "without filling in anything" issue-comment
   case_7:
     name: "It considers empty issues to be invalid."
     needs: case_6
@@ -189,9 +189,10 @@ jobs:
       - name: test
         run: |
           issue_number="${{ steps.setup.outputs.issue_number }}"
-          .github/workflows/test-helpers/get-issue-validation-log "${issue_number}"
+          .github/workflows/test-helpers/wait-for-issue "${issue_number}"
           set -x
-          grep "Closed with: .* created an empty issue" log
+          test "$(cat issue-state)" = "closed"
+          grep "created an empty issue" issue-comment
   case_8:
     name: "It labels validated issues with `Status: Unrouted`."
     needs: case_7
@@ -213,7 +214,7 @@ jobs:
       - name: test
         run: |
           issue_number="${{ steps.setup.outputs.issue_number }}"
-          .github/workflows/test-helpers/get-issue-validation-log "${issue_number}"
+          .github/workflows/test-helpers/wait-for-issue "${issue_number}"
           set -x
           expected="Status: Unrouted"
           actual=$(
