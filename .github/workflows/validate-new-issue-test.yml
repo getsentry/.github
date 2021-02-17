@@ -192,3 +192,34 @@ jobs:
           .github/workflows/test-helpers/get-issue-validation-log "${issue_number}"
           set -x
           grep "Closed with: .* created an empty issue" log
+  case_8:
+    name: "It labels validated issues with `Status: Unrouted`."
+    needs: case_7
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - id: setup
+        name: setup
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_NONMEMBER }}
+        run: |
+          issue_number=$(basename $(gh issue create --title "Greetings, program!" --body "
+          ### Environment
+          ### Steps to Reproduce
+          ### Expected Result
+          ### Actual Result
+          "))
+          echo "::set-output name=issue_number::${issue_number}"
+      - name: test
+        run: |
+          issue_number="${{ steps.setup.outputs.issue_number }}"
+          .github/workflows/test-helpers/get-issue-validation-log "${issue_number}"
+          set -x
+          expected="Status: Unrouted"
+          actual=$(
+            gh api "/repos/:owner/:repo/issues/${issue_number}" \
+             | jq -r ".labels[] | select(.name==\"${expected}\")".name
+          )
+          echo "expected: ${expected}"
+          echo "actual:   ${actual}"
+          test "$actual" = "$expected"
