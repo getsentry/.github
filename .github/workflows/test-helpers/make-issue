@@ -1,8 +1,26 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-function download-and-extract {
-  issue_number="$1"
+function download-and-extract-issue {
+  local issue_number="$1"
+
+  # I tried `gh issue view` but it does whack stuff with the terminal that makes
+  # it non-trivial to redirect/pipe. Pulling from JSON is probably more robust
+  # anyway.
+
+  gh api "/repos/:owner/:repo/issues/${issue_number}" > issue
+  gh api "/repos/:owner/:repo/issues/${issue_number}/comments" > issue-comments
+
+  echo "${issue_number}" > issue-number
+  jq -r '.state' issue > issue-state
+  jq -r '.labels[].name' issue > issue-labels
+  jq -r '.comments' issue > issue-ncomments
+  jq -r '.[0].body' issue-comments > issue-comment
+}
+
+
+function download-and-extract-log {
+  local issue_number="$1"
   echo "Determining workflow run ID for issue #${issue_number} ..."
 
   # I'm not finding a good way to determine, given a list of workflow runs,
@@ -54,9 +72,23 @@ function backoff {
   exit 1
 }
 
-echo "Downloading and extracting the validation workflow run log for issue #$1."
-backoff download-and-extract "$1"
+issue_number=$(
+  basename $(
+    gh issue create --title "Greetings, program!" --body "$1"
+  )
+)
+echo "Downloading and extracting the validation workflow run log for issue #${issue_number}."
+backoff download-and-extract-log "$issue_number"
 echo "Log downloaded and extracted successfully."
 echo "::group::Log:"
 cat log
+echo "::endgroup::"
+download-and-extract-issue "$issue_number"
+echo "::group::Issue:"
+echo "Issue:    $(cat issue-number)"
+echo "State:    $(cat issue-state)"
+echo "Labels:   $(cat issue-labels | tr '\n' ',')"
+echo "Comments: $(cat issue-ncomments)"
+echo "Comment:  "
+cat issue-comment | sed -e 's/^/  | /'
 echo "::endgroup::"
