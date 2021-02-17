@@ -9,9 +9,12 @@ function download-and-extract-issue {
   # anyway.
 
   gh api "/repos/:owner/:repo/issues/${issue_number}" > issue
-  jq -r .state issue > issue-state
-  jq -r .comments issue > issue-ncomments
   gh api "/repos/:owner/:repo/issues/${issue_number}/comments" > issue-comments
+
+  echo "${issue_number}" > issue-number
+  jq -r '.state' issue > issue-state
+  jq -r '.labels[].name' issue > issue-labels
+  jq -r '.comments' issue > issue-ncomments
   jq -r '.[0].body' issue-comments > issue-comment
 }
 
@@ -69,7 +72,11 @@ function backoff {
   exit 1
 }
 
-issue_number="$1"
+issue_number=$(
+  basename $(
+    gh issue create --title "Greetings, program!" --body "$1"
+  )
+)
 echo "Downloading and extracting the validation workflow run log for issue #${issue_number}."
 backoff download-and-extract-log "$issue_number"
 echo "Log downloaded and extracted successfully."
@@ -78,8 +85,10 @@ cat log
 echo "::endgroup::"
 download-and-extract-issue "$issue_number"
 echo "::group::Issue:"
+echo "Issue:    $(cat issue-number)"
 echo "State:    $(cat issue-state)"
+echo "Labels:   $(cat issue-labels | tr '\n' ',')"
 echo "Comments: $(cat issue-ncomments)"
-echo "Comment:"
+echo "Comment:  "
 cat issue-comment | sed -e 's/^/  | /'
 echo "::endgroup::"

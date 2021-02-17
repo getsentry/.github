@@ -9,14 +9,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - id: setup
+        name: setup
+        run: .github/workflows/test-helpers/make-issue "This is an issue, clearly."
       - name: test
         run: |
-          issue_number=$(
-            basename $(
-              gh issue create --title "Greetings, program!" --body "This is an issue, clearly."
-            )
-          )
-          .github/workflows/test-helpers/wait-for-issue "${issue_number}"
           set -x
           test "$(cat issue-state)" = "open"
           test "$(cat issue-ncomments)" = "0"
@@ -31,10 +28,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_NONMEMBER }}
         run: |
-          issue_number=$(
-            basename $(
-              gh issue create --title "Greetings, program!" \
-                --body "
+          .github/workflows/test-helpers/make-issue "
           ### Environment
 
           foo
@@ -51,13 +45,8 @@ jobs:
 
           blah
           "
-            )
-          )
-          echo "::set-output name=issue_number::${issue_number}"
       - name: test
         run: |
-          issue_number="${{ steps.setup.outputs.issue_number }}"
-          .github/workflows/test-helpers/wait-for-issue "${issue_number}"
           set -x
           test "$(cat issue-state)" = "open"
           test "$(cat issue-ncomments)" = "0"
@@ -72,10 +61,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_NONMEMBER }}
         run: |
-          issue_number=$(
-            basename $(
-              gh issue create --title "Greetings, program!" \
-                --body "
+          .github/workflows/test-helpers/make-issue "
           ### Preamble
           ### Steps to Reproduce
           ### Expected Result
@@ -83,13 +69,8 @@ jobs:
           ### Environment
           ### Postamble
           "
-            )
-          )
-          echo "::set-output name=issue_number::${issue_number}"
       - name: test
         run: |
-          issue_number="${{ steps.setup.outputs.issue_number }}"
-          .github/workflows/test-helpers/wait-for-issue "${issue_number}"
           set -x
           test "$(cat issue-state)" = "open"
           test "$(cat issue-ncomments)" = "0"
@@ -103,18 +84,9 @@ jobs:
         name: setup
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_NONMEMBER }}
-        run: |
-          issue_number=$(
-            basename $(
-              gh issue create --title "Greetings, program!" \
-                --body "I don't follow directions."
-            )
-          )
-          echo "::set-output name=issue_number::${issue_number}"
+        run: .github/workflows/test-helpers/make-issue "I don't follow directions."
       - name: test
         run: |
-          issue_number="${{ steps.setup.outputs.issue_number }}"
-          .github/workflows/test-helpers/wait-for-issue "${issue_number}"
           set -x
           test "$(cat issue-state)" = "closed"
           grep "does not properly use" issue-comment
@@ -129,17 +101,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_NONMEMBER }}
         run: |
-          issue_number=$(
-            basename $(
-              gh issue create --title "Greetings, program!" \
-                --body "$(sed '1{/^---$/!q;};1,/^---$/d' '.github/ISSUE_TEMPLATE/BUG_REPORT.md')"
-            )
-          )
-          echo "::set-output name=issue_number::${issue_number}"
+          .github/workflows/test-helpers/make-issue \
+            "$(sed '1{/^---$/!q;};1,/^---$/d' '.github/ISSUE_TEMPLATE/BUG_REPORT.md')"
       - name: test
         run: |
-          issue_number="${{ steps.setup.outputs.issue_number }}"
-          .github/workflows/test-helpers/wait-for-issue "${issue_number}"
           set -x
           test "$(cat issue-state)" = "closed"
           grep "without filling in anything" issue-comment
@@ -154,17 +119,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_NONMEMBER }}
         run: |
-          issue_number=$(
-            basename $(
-              gh issue create --title "Greetings, program!" \
-                --body "$(sed '1{/^---$/!q;};1,/^---$/d;s/$/\r/' '.github/ISSUE_TEMPLATE/BUG_REPORT.md')"
-            )
-          )
-          echo "::set-output name=issue_number::${issue_number}"
+          .github/workflows/test-helpers/make-issue \
+            "$(sed '1{/^---$/!q;};1,/^---$/d;s/$/\r/' '.github/ISSUE_TEMPLATE/BUG_REPORT.md')"
       - name: test
         run: |
-          issue_number="${{ steps.setup.outputs.issue_number }}"
-          .github/workflows/test-helpers/wait-for-issue "${issue_number}"
           set -x
           test "$(cat issue-state)" = "closed"
           grep "without filling in anything" issue-comment
@@ -178,21 +136,12 @@ jobs:
         name: setup
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_NONMEMBER }}
-        run: |
-          issue_number=$(
-            basename $(
-              gh issue create --title "Greetings, program!" \
-                --body "        "
-            )
-          )
-          echo "::set-output name=issue_number::${issue_number}"
+        run: .github/workflows/test-helpers/make-issue "        "
       - name: test
         run: |
-          issue_number="${{ steps.setup.outputs.issue_number }}"
-          .github/workflows/test-helpers/wait-for-issue "${issue_number}"
           set -x
           test "$(cat issue-state)" = "closed"
-          grep "created an empty issue" issue-comment
+          grep "created an empty issue"  issue-comment
   case_8:
     name: "It labels validated issues with `Status: Unrouted`."
     needs: case_7
@@ -204,23 +153,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_NONMEMBER }}
         run: |
-          issue_number=$(basename $(gh issue create --title "Greetings, program!" --body "
+          .github/workflows/test-helpers/make-issue "
           ### Environment
           ### Steps to Reproduce
           ### Expected Result
           ### Actual Result
-          "))
-          echo "::set-output name=issue_number::${issue_number}"
+          "
       - name: test
         run: |
-          issue_number="${{ steps.setup.outputs.issue_number }}"
-          .github/workflows/test-helpers/wait-for-issue "${issue_number}"
           set -x
-          expected="Status: Unrouted"
-          actual=$(
-            gh api "/repos/:owner/:repo/issues/${issue_number}" \
-             | jq -r ".labels[] | select(.name==\"${expected}\")".name
-          )
-          echo "expected: ${expected}"
-          echo "actual:   ${actual}"
-          test "$actual" = "$expected"
+          grep "Status: Unrouted" issue-labels
