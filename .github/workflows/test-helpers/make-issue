@@ -74,7 +74,7 @@ function backoff {
 
 issue_number=$(
   basename $(
-    gh issue create --title "Greetings, program!" --body "$1"
+    gh issue create --title "${2:-Greetings, program!}" --body "$1"
   )
 )
 echo "Downloading and extracting the validation workflow run log for issue #${issue_number}."
