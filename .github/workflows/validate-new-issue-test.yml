@@ -141,7 +141,7 @@ jobs:
         run: |
           set -x
           test "$(cat issue-state)" = "closed"
-          grep "created an empty issue"  issue-comment
+          grep "created an empty issue" issue-comment
   case_8:
     name: "It labels validated issues with `Status: Unrouted`."
     needs: case_7
@@ -163,3 +163,20 @@ jobs:
         run: |
           set -x
           grep "Status: Unrouted" issue-labels
+  case_9:
+    name: "It avoids infinite recursion."
+    needs: case_8
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - id: setup
+        name: setup
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_NONMEMBER }}
+        run: |
+          .github/workflows/test-helpers/make-issue "bork bork bork!" "validation bot is confused"
+      - name: test
+        run: |
+          set -x
+          test "$(cat issue-state)" = "open"
+          test "$(cat issue-ncomments)" = "0"
