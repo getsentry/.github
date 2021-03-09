@@ -75,7 +75,7 @@ jobs:
           test "$(cat issue-state)" = "open"
           test "$(cat issue-ncomments)" = "0"
   case_4:
-    name: "It closes invalid issues with a comment."
+    name: "It closes invalid issues with a comment and a label."
     needs: case_3
     runs-on: ubuntu-latest
     steps:
@@ -89,6 +89,7 @@ jobs:
         run: |
           set -x
           test "$(cat issue-state)" = "closed"
+          grep 'Status: Invalid' issue-labels
           grep "does not properly use" issue-comment
   case_5:
     name: "It considers exact matches to be invalid."
