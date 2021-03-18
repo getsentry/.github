@@ -181,3 +181,24 @@ jobs:
           set -x
           test "$(cat issue-state)" = "open"
           test "$(cat issue-ncomments)" = "0"
+  case_10:
+    name: "It doesn't require all headers to match"
+    needs: case_9
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - id: setup
+        name: setup
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_NONMEMBER }}
+        run: |
+          .github/workflows/test-helpers/make-issue "
+          ### Steps to Reproduce
+          ### Expected Result
+          ### Actual Result
+          "
+      - name: test
+        run: |
+          set -x
+          test "$(cat issue-state)" = "open"
+          test "$(cat issue-ncomments)" = "0"
