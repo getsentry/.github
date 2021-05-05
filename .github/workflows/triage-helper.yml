@@ -22,5 +22,6 @@ jobs:
         run: |
           labels_to_remove=$(gh issue view ${{ github.event.issue.number }} --json labels --jq '[.labels[].name | select(startswith("Status: ") and . != "${{ github.event.label.name }}")] | join(",")' )
           if [[ -n "${labels_to_remove// /}" ]]; then
-            gh issue edit ${{ github.event.issue.number }} --remove-label "$labels_to_remove"
+            # Use `--add-label` to ensure consistent state as this action may run with race conditons
+            gh issue edit ${{ github.event.issue.number }} --remove-label "$labels_to_remove" --add-label "${{ github.event.label.name }}"
           fi
