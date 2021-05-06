@@ -1,27 +1,16 @@
-name: Issue Triage Helper
+name: Issue Status Helper
 on:
   issues:
     types: [labeled]
 jobs:
   routed:
     runs-on: ubuntu-latest
-    if: >-
-      contains(
-        fromJSON('[
-          "Status: In Progress",
-          "Status: Backlog",
-          "Status: Needs More Information"
-        ]'),
-        github.event.label.name
-      )
+    if: "startsWith(github.event.label.name, 'Status: ')"
     steps:
-      - name: "Remove all 'Status: *' labels"
+      - name: "Ensure a single 'Status: *' label"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
-          labels_to_remove=$(jq -r '[.issue.labels[].name | select(startswith("Status: ") and . != "${{ github.event.label.name }}")] | join(",")' $GITHUB_EVENT_PATH)
-          if [[ -n "${labels_to_remove// /}" ]]; then
-            # Use `--add-label` to ensure consistent state as this action may run with race conditons
-            gh issue edit ${{ github.event.issue.number }} --remove-label "$labels_to_remove" --add-label "${{ github.event.label.name }}"
-          fi
+          labels_to_remove=$(gh api "/repos/$GH_REPO/labels" -q '[.[].name | select(startswith("Status: ") and . != "${{ github.event.label.name }}")] | join(",")')
+          gh issue edit ${{ github.event.issue.number }} --remove-label "$labels_to_remove" --add-label "${{ github.event.label.name }}"
