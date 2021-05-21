@@ -12,7 +12,7 @@ jobs:
     if: >-
       startsWith(github.event.label.name, 'Team: ')
       &&
-      !contains(github.event.issue.labels.*.name, 'Status: Accepted')
+      !contains(github.event.issue.labels.*.name, 'Status: Backlog')
       &&
       !contains(github.event.issue.labels.*.name, 'Status: In Progress')
     steps:
