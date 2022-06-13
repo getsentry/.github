@@ -1,5 +1,3 @@
-
-
 # Security
 
 ## Reporting Security Issues
