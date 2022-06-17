@@ -6,7 +6,7 @@ If you've found a security issue in Sentry or in our supported SDKs, please repo
 
 Please include as much information as possible in your report to better help us understand and resolve the issue: 
 
-- Where the security issues exists (ie. Sentry SaaS, a Sentry-supported SDK, infrastructure, etc.)
+- Where the security issue exists (ie. Sentry SaaS, a Sentry-supported SDK, infrastructure, etc.)
 - The type of issue (ex. SQL injection, cross-site scripting, missing authorization, etc.)
 - Full paths or links to the source files where the security issue exists, if possible
 - Any special configuration required to reproduce the issue
