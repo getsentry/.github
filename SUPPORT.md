@@ -1,1 +1,0 @@
-If you are using [sentry.io](https://sentry.io), the SaaS product, please visit [sentry.io/support](https://sentry.io/support) for any support needs. If you are using the open source version, you can use our [community forums](https://github.com/getsentry/sentry/discussions) or the public [Discord Server](https://discord.gg/6c52wN7).
