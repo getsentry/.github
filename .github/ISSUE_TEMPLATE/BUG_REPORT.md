@@ -5,11 +5,7 @@ about: Report a bug in this repo
 
 ### Environment
 
-How do you use Sentry?
-Sentry SaaS (sentry.io) or self-hosted/on-premise (which version?)
-
-Which SDK and version?
-e.g: JavaScript 5.11.1, .NET 1.2.0
+What version are you running? Etc.
 
 ### Steps to Reproduce
 
