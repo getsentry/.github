@@ -2,7 +2,12 @@
 
 ## Reporting Security Issues
 
-If you've found a security issue in Sentry or in our supported SDKs, please report the issue to `security[@]sentry.io`.
+If you've found a security issue in Sentry or in our supported SDKs, you can submit your report with one of the options below.
+
+1. Using [GitHub's private vulnerabilty reporting feature](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing/privately-reporting-a-security-vulnerability#privately-reporting-a-security-vulnerability) on the corresponding repository.
+2. Via email to `security[@]sentry.io`.
+
+> We prefer reports via GitHub's private vulnerability reporting.
 
 Please include as much information as possible in your report to better help us understand and resolve the issue: 
 
