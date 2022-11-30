@@ -18,6 +18,15 @@ jobs:
       &&
       !contains(github.event.issue.labels.*.name, 'Status: In Progress')
     steps:
+      - name: "Check to make sure issue creator is not a Sentry org member"
+        env:
+          issue_number: ${{ github.event.issue.number }}
+        run: |
+          author_association=$(gh api "repos/$GH_REPO/issues/$issue_number" -q .author_association)
+          if [[ "$author_association" = "MEMBER" || "$author_association" = "OWNER" ]]; then
+            echo "Skipping routing logic since issue is opened by a Sentry org member."
+            exit 0
+          fi
       - name: "Ensure a single 'Team: *' label with 'Status: Untriaged'"
         env:
           team_label: ${{ github.event.label.name }}
