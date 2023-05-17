@@ -5,18 +5,16 @@ about: Report a bug in this repo
 
 ### Environment
 
-What version are you running? Etc.
+What version of the CLI and what OS are you running?
 
 ### Steps to Reproduce
 
-1. What
-2. you
-3. did.
+What you did.
 
-### Expected Result
+### Expected/Actual Result
 
-What you thought would happen.
+What you thought would happen and what actually happened.
 
-### Actual Result
+### Logs
 
-What actually happened. Maybe a screenshot/recording? Maybe some logs?
+When filing an issue, please attach debug logs, either by using `--log-level=debug` flag or `SENTRY_LOG_LEVEL=debug` environment variable.
