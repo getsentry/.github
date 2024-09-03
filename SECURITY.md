@@ -17,4 +17,4 @@ If you need to encrypt sensitive information sent to us, please use [our PGP key
 
 ```
 E406 C27A E971 6515 A1B1 ED86 641D 2F6C 230D BE3B
-```
+```E406 C27A E971 6515 A1B1 ED86 641D 2F6C 230D BE3B
