@@ -11,8 +11,23 @@ jobs:
       - name: 'Checkout Repository'
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
-      - name: Dependency Review
+      - name: 'Check Config'
+        id: check_config
+        run: |
+          if [ -f .github/dependency-review-config.yml ]; then
+            echo "dependency_review_config_exists=true" >> $GITHUB_ENV
+          else
+            echo "dependency_review_config_exists=false" >> $GITHUB_ENV
+          fi
+
+      - name: Dependency Review (local config)
+        if: env.dependency_review_config_exists == 'true'
         uses: actions/dependency-review-action@5a2ce3f5b92ee19cbb1541a4984c76d921601d7c # v4.3.4
         with:
-          # Possible values: "critical", "high", "moderate", "low"
-          fail-on-severity: high 
+          config-file: './.github/dependency-review-config.yml'
+
+      - name: Dependency Review
+        if: env.dependency_review_config_exists == 'false'
+        uses: actions/dependency-review-action@5a2ce3f5b92ee19cbb1541a4984c76d921601d7c # v4.3.4
+        with:
+          fail-on-severity: high
