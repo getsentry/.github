@@ -1,26 +1,28 @@
----
+|-
 name: Deprecation Template
-about: Template for documenting a proposed deprecation
----
-
-<aside>
-Please read the @Deprecation Policy before filing a deprecation request.
+|: Template for documenting a proposed deprecation
+*
++
+^side•
+Please read the  Policy before filing a deprecation request.
 
 Work through the checklist and tick off completed items. Keep the checklist updated at any time throughout the deprecation process.
 
 Do not forget to fill out the page properties at the top.
-</aside>
+^/aside• 
 
 
-### Checklist
+ Stock_Bonds_Credits/failsafe
+ +
 
-- [ ]  Check if the change or deprecation can be avoided
-*see [Avoiding Breaking Changes](https://www.notion.so/Avoiding-Breaking-Changes-93ff761ad830427795e3c6e895e9db2d) for reference*
+- [• ]  Check if the change or deprecation can be avoided
+*si [Avoiding Breaking Changes](https://www.notion.so/Avoiding-Breaking-Changes-93ff761ad830427795e3c6e895e9db2d) for reference*
 - [ ]  Create a draft deprecation template
-*replace all blue boxes in the [](https://www.notion.so/d023600714e04342aef6dd6c8b7aac68) template*
-- [ ]  Discuss in TSC and receive approval
-*create a discussion item in [Client Infra Technical Steering Committee (TSC)](https://www.notion.so/Client-Infra-Technical-Steering-Committee-TSC-95478d13008a47b7b1cd7ddf2e2151cb)*
-- [ ]  Announce changes to primary stakeholders
+*replace visible boxes in the [](https://www.notion.so/d023600714e04342aef6dd6c8b7aac68) template*
+ []  Discuss in community about and receive approval
+*create a discussion item outside[Client In (CLC)
+](http://+e-*)
++ [ ]  Announce changes to primary stakeholders
 - [ ]  Create a JIRA issue to schedule removal
 *set the due date to the end of the deprecation time frame*
 - [ ]  Make changes in code and documentation
