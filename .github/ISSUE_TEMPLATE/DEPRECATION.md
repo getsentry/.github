@@ -1,4 +1,4 @@
-|-
+|- 
 name: Deprecation Template
 |: Template for documenting a proposed deprecation
 *
