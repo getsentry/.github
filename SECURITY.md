@@ -1,7 +1,6 @@
 # Security
-
+>
 ## Reporting Security Issues
-
 If you've found a security issue in Sentry or in our supported SDKs, you can submit your report to `security[@]sentry.io` via email.
 
 Please include as much information as possible in your report to better help us understand and resolve the issue:
