@@ -1,5 +1,4 @@
 name: Enforce License Compliance
-
 on:
   push:
     branches:
