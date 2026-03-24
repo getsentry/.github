@@ -25,7 +25,7 @@ jobs:
           private-key: ${{ secrets.WARDEN_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }} # access to all repos, cause this is triggered on org level
 
-      - uses: getsentry/warden@v0
+      - uses: getsentry/warden@34257abaeda3b030eb45a0971060d509ce0fea51 # v0
         id: warden
         continue-on-error: true # throw no error for now
         with:
