@@ -1,0 +1,14 @@
+version = 1
+
+[defaults]
+reportOn = "medium"
+failOn = "off"
+failCheck = false
+requestChanges = false
+
+[[skills]]
+name = "security-review"
+
+[[skills.triggers]]
+type = "pull_request"
+actions = ["opened", "synchronize", "reopened"]
