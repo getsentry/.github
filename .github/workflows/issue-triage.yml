@@ -1,0 +1,160 @@
+name: Issue Triage
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue-number:
+        description: GitHub issue number to triage.
+        required: true
+        type: number
+      repository:
+        description: Repository in owner/name form.
+        required: true
+        type: string
+        default: getsentry/sentry-mcp
+      target-ref:
+        description: Optional target repository ref to inspect.
+        required: false
+        type: string
+        default: ""
+      automation-ref:
+        description: Optional getsentry/.github ref. Defaults to the selected workflow ref.
+        required: false
+        type: string
+        default: ""
+
+  workflow_call:
+    inputs:
+      issue-number:
+        required: true
+        type: number
+      repository:
+        required: true
+        type: string
+      target-ref:
+        required: false
+        type: string
+        default: ""
+      automation-ref:
+        required: false
+        type: string
+        default: main
+    secrets:
+      FLUE_PRIVATE_KEY:
+        required: true
+      FLUE_OPENAI_API_KEY:
+        required: true
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+
+    steps:
+      - name: Resolve target repository
+        id: target
+        env:
+          TARGET_REPOSITORY: ${{ inputs.repository }}
+          AUTOMATION_REF: ${{ inputs['automation-ref'] }}
+          EXPECTED_OWNER: ${{ github.repository_owner }}
+          WORKFLOW_REF_NAME: ${{ github.ref_name }}
+        run: |
+          owner="${TARGET_REPOSITORY%%/*}"
+          name="${TARGET_REPOSITORY#*/}"
+          if [ -z "$owner" ] || [ -z "$name" ] || [ "$owner" = "$name" ]; then
+            echo "Invalid repository: $TARGET_REPOSITORY" >&2
+            exit 2
+          fi
+          if [ "$owner" != "$EXPECTED_OWNER" ]; then
+            echo "Repository must belong to $EXPECTED_OWNER: $TARGET_REPOSITORY" >&2
+            exit 2
+          fi
+          automation_ref="$AUTOMATION_REF"
+          if [ -z "$automation_ref" ]; then
+            automation_ref="$WORKFLOW_REF_NAME"
+          fi
+          echo "owner=$owner" >> "$GITHUB_OUTPUT"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "automation-ref=$automation_ref" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout org automation
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: ${{ github.repository_owner }}/.github
+          ref: ${{ steps.target.outputs.automation-ref }}
+          path: automation
+          persist-credentials: false
+
+      - name: Check Flue feature registry
+        run: |
+          node automation/.github/scripts/check-flue-feature.mjs \
+            automation/.github/flue/features.json \
+            issue-triage \
+            "${{ inputs.repository }}"
+
+      - name: Validate Flue configuration
+        env:
+          FLUE_CLIENT_ID: ${{ vars.FLUE_CLIENT_ID }}
+        run: |
+          if [ -z "$FLUE_CLIENT_ID" ]; then
+            echo "Missing required FLUE_CLIENT_ID organization variable" >&2
+            exit 2
+          fi
+
+      - name: Create issue triage bot token
+        id: issue-triage-app-token
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
+        with:
+          client-id: ${{ vars.FLUE_CLIENT_ID }}
+          private-key: ${{ secrets.FLUE_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ steps.target.outputs.name }}
+          permission-issues: write
+
+      - name: Checkout target repository
+        if: ${{ inputs['target-ref'] == '' }}
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: ${{ inputs.repository }}
+          path: target-repo
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Checkout target repository at ref
+        if: ${{ inputs['target-ref'] != '' }}
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: ${{ inputs.repository }}
+          ref: ${{ inputs['target-ref'] }}
+          path: target-repo
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+        with:
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: automation/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: automation
+        run: pnpm install --frozen-lockfile
+
+      - name: Run triage agent
+        working-directory: automation
+        env:
+          GH_TOKEN: ${{ steps.issue-triage-app-token.outputs.token }}
+          FLUE_OPENAI_API_KEY: ${{ secrets.FLUE_OPENAI_API_KEY }}
+          FLUE_TRIAGE_MODEL: ${{ vars.FLUE_TRIAGE_MODEL }}
+          FLUE_TARGET_REPO_PATH: ${{ github.workspace }}/target-repo
+        run: |
+          pnpm run flue:issue-triage --id "issue-triage-${{ inputs['issue-number'] }}" \
+            --payload '{"issueNumber": ${{ inputs['issue-number'] }}, "repository": "${{ inputs.repository }}"}'

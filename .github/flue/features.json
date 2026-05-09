@@ -1,0 +1,15 @@
+{
+  "features": {
+    "issue-triage": {
+      "description": "Triage newly opened GitHub issues with Flue and Sentry Intern.",
+      "repositories": [
+        "getsentry/cli",
+        "getsentry/dotagents",
+        "getsentry/junior",
+        "getsentry/sentry-mcp",
+        "getsentry/vitest-evals",
+        "getsentry/warden"
+      ]
+    }
+  }
+}
