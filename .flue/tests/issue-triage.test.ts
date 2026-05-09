@@ -1,13 +1,27 @@
-import { describe, expect, it } from "vitest";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { afterEach, describe, expect, it } from "vitest";
+import type { FlueSession } from "@flue/sdk/client";
 
 import {
   buildDuplicateClosureComment,
   hasDuplicateOfFlag,
   hasIssueTriageBotIntro,
   issueRepositoryFromUrl,
+  prepareRepository,
   wasClosedAsNotPlanned,
   withIssueTriageBotIntro,
 } from "../agents/issue-triage";
+
+const originalTargetRepoPath = process.env.FLUE_TARGET_REPO_PATH;
+
+afterEach(() => {
+  if (originalTargetRepoPath === undefined) {
+    delete process.env.FLUE_TARGET_REPO_PATH;
+  } else {
+    process.env.FLUE_TARGET_REPO_PATH = originalTargetRepoPath;
+  }
+});
 
 const duplicate = {
   number: 950,
@@ -91,5 +105,23 @@ describe("duplicate closure", () => {
       ),
     ).toBe("getsentry/sentry-mcp");
     expect(issueRepositoryFromUrl("https://example.com/issues/950")).toBeNull();
+  });
+});
+
+describe("repository preparation", () => {
+  it("reports unavailable when the prepared checkout path is missing", async () => {
+    process.env.FLUE_TARGET_REPO_PATH = join(
+      tmpdir(),
+      `missing-flue-checkout-${Date.now()}`,
+    );
+    const session = {
+      shell: async () => {
+        throw new Error("shell should not run for a missing checkout path");
+      },
+    } as unknown as FlueSession;
+
+    await expect(
+      prepareRepository(session, 1, "getsentry/sentry-mcp"),
+    ).resolves.toMatchObject({ checkoutAvailable: false, repoPath: null });
   });
 });

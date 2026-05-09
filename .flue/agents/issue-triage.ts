@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { FlueContext, FlueSession } from "@flue/sdk/client";
@@ -759,13 +759,31 @@ async function readIssueContext(
   return context;
 }
 
-async function prepareRepository(
+async function isDirectory(path: string) {
+  try {
+    return (await stat(path)).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+export async function prepareRepository(
   session: FlueSession,
   issueNumber: number,
   repository?: string,
 ) {
   if (process.env.FLUE_TARGET_REPO_PATH) {
     const repoPath = process.env.FLUE_TARGET_REPO_PATH;
+    if (!(await isDirectory(repoPath))) {
+      return {
+        checkoutAvailable: false,
+        repoPath: null,
+        remoteUrl: null,
+        headSha: null,
+        checkoutNote: `Target repository path is not available: ${repoPath}`,
+      };
+    }
+
     const remote = await session.shell("git remote get-url origin", {
       commands: [git],
       cwd: repoPath,
@@ -776,6 +794,16 @@ async function prepareRepository(
       cwd: repoPath,
       timeout: 30_000,
     });
+
+    if (head.exitCode !== 0) {
+      return {
+        checkoutAvailable: false,
+        repoPath: null,
+        remoteUrl: null,
+        headSha: null,
+        checkoutNote: `Target repository checkout is not a git checkout: ${head.stderr || head.stdout}`,
+      };
+    }
 
     return {
       checkoutAvailable: true,
