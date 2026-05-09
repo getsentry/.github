@@ -1,4 +1,4 @@
-name: 'Dependency Review'
+name: "Dependency Review"
 on: [pull_request]
 
 permissions:
@@ -8,10 +8,10 @@ jobs:
   dependency-review:
     runs-on: ubuntu-latest
     steps:
-      - name: 'Checkout Repository'
+      - name: "Checkout Repository"
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
-      - name: 'Check Config'
+      - name: "Check Config"
         id: check_config
         run: |
           if [ -f .github/dependency-review-config.yml ]; then
@@ -24,7 +24,7 @@ jobs:
         if: env.dependency_review_config_exists == 'true'
         uses: actions/dependency-review-action@5a2ce3f5b92ee19cbb1541a4984c76d921601d7c # v4.3.4
         with:
-          config-file: './.github/dependency-review-config.yml'
+          config-file: "./.github/dependency-review-config.yml"
 
       - name: Dependency Review
         if: env.dependency_review_config_exists == 'false'

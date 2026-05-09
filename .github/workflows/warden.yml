@@ -8,8 +8,8 @@ jobs:
   warden:
     runs-on: ubuntu-latest
     permissions:
-        contents: read
-        id-token: write
+      contents: read
+      id-token: write
     env:
       WARDEN_ANTHROPIC_API_KEY: ${{ secrets.WARDEN_ANTHROPIC_API_KEY }}
       WARDEN_MODEL: ${{ secrets.WARDEN_MODEL }}

@@ -252,7 +252,8 @@ function findDuplicateLabel(context: IssueContext) {
   return existingLabels(context).get("duplicate") ?? null;
 }
 
-export const TRIAGE_BOT_INTRO = ":wave: I'm Sentry Intern, the issue triage bot.";
+export const TRIAGE_BOT_INTRO =
+  ":wave: I'm Sentry Intern, the issue triage bot.";
 
 function getFirstParagraph(value: string) {
   return value.trim().split(/\n\s*\n/, 1)[0] ?? "";
@@ -388,7 +389,8 @@ async function supportsDuplicateOfFlag(session: FlueSession) {
     timeout: 60_000,
   });
   duplicateOfFlagSupported =
-    result.exitCode === 0 && hasDuplicateOfFlag(`${result.stdout}\n${result.stderr}`);
+    result.exitCode === 0 &&
+    hasDuplicateOfFlag(`${result.stdout}\n${result.stderr}`);
 
   return duplicateOfFlagSupported;
 }
@@ -549,9 +551,7 @@ async function closeDuplicate(
     commentPosted = await postComment(session, context, comment);
   } catch (error) {
     const summary = `Posting duplicate closure comment failed: ${summarizeAgentFailure(error)}`;
-    failureSummary = failureSummary
-      ? `${failureSummary}; ${summary}`
-      : summary;
+    failureSummary = failureSummary ? `${failureSummary}; ${summary}` : summary;
     console.warn(`[issue-triage] ${summary}`);
   }
 
@@ -583,9 +583,7 @@ async function closeDuplicate(
     };
   } catch (error) {
     const summary = `Closing duplicate issue failed: ${summarizeAgentFailure(error)}`;
-    failureSummary = failureSummary
-      ? `${failureSummary}; ${summary}`
-      : summary;
+    failureSummary = failureSummary ? `${failureSummary}; ${summary}` : summary;
     console.warn(`[issue-triage] ${summary}`);
   }
 
@@ -810,7 +808,8 @@ export async function prepareRepository(
       repoPath,
       remoteUrl: remote.exitCode === 0 ? remote.stdout.trim() : repository,
       headSha: head.exitCode === 0 ? head.stdout.trim() : null,
-      checkoutNote: "Using the target repository checkout prepared by GitHub Actions.",
+      checkoutNote:
+        "Using the target repository checkout prepared by GitHub Actions.",
     };
   }
 
