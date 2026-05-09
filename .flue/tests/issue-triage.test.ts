@@ -7,6 +7,7 @@ import {
   buildDuplicateClosureComment,
   hasDuplicateOfFlag,
   hasIssueTriageBotIntro,
+  issueRepositoryFromIssue,
   issueRepositoryFromUrl,
   prepareRepository,
   wasClosedAsNotPlanned,
@@ -105,6 +106,14 @@ describe("duplicate closure", () => {
       ),
     ).toBe("getsentry/sentry-mcp");
     expect(issueRepositoryFromUrl("https://example.com/issues/950")).toBeNull();
+  });
+
+  it("extracts the repository from GitHub issue objects", () => {
+    expect(
+      issueRepositoryFromIssue({
+        url: "https://github.com/getsentry/sentry-mcp/issues/952",
+      }),
+    ).toBe("getsentry/sentry-mcp");
   });
 });
 

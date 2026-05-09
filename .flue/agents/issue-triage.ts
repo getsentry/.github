@@ -317,6 +317,14 @@ export function issueRepositoryFromUrl(url: string) {
   }
 }
 
+export function issueRepositoryFromIssue(issue: unknown) {
+  if (!isRecord(issue) || typeof issue.url !== "string") {
+    return null;
+  }
+
+  return issueRepositoryFromUrl(issue.url);
+}
+
 export function wasClosedAsNotPlanned(issue: unknown) {
   if (!isRecord(issue)) {
     return false;
@@ -932,10 +940,12 @@ export default async function ({ init, payload }: FlueContext) {
       );
     }
 
+    const currentRepository =
+      repository ?? issueRepositoryFromIssue(initialContext.issue);
     const duplicateRepository = issueRepositoryFromUrl(
       duplicateSearch.duplicate.url,
     );
-    if (repository && duplicateRepository !== repository) {
+    if (!currentRepository || duplicateRepository !== currentRepository) {
       return {
         outcome: "needs_human_review",
         steps: [
@@ -943,7 +953,9 @@ export default async function ({ init, payload }: FlueContext) {
           {
             name: "validate-duplicate",
             result: duplicateRepository
-              ? `cross-repo candidate from ${duplicateRepository}`
+              ? currentRepository
+                ? `cross-repo candidate from ${duplicateRepository}`
+                : "current issue repository could not be validated"
               : "candidate URL did not identify a same-repo GitHub issue",
           },
         ],
@@ -952,7 +964,9 @@ export default async function ({ init, payload }: FlueContext) {
         comment_posted: false,
         needs_human_review: true,
         summary: duplicateRepository
-          ? `Found duplicate candidate #${duplicateSearch.duplicate.number} in ${duplicateRepository}, but automatic closure only supports same-repo duplicates.`
+          ? currentRepository
+            ? `Found duplicate candidate #${duplicateSearch.duplicate.number} in ${duplicateRepository}, but automatic closure only supports same-repo duplicates.`
+            : `Found duplicate candidate #${duplicateSearch.duplicate.number}, but the current issue repository could not be validated.`
           : `Found duplicate candidate #${duplicateSearch.duplicate.number}, but its URL could not be validated as a same-repo issue.`,
       };
     }
@@ -960,14 +974,14 @@ export default async function ({ init, payload }: FlueContext) {
     const closureContext = await readIssueContext(
       session,
       issueNumber,
-      repository,
+      currentRepository,
     );
     let canonicalIssue: unknown;
     try {
       canonicalIssue = await readIssueClosureContext(
         session,
         duplicateSearch.duplicate.number,
-        repository,
+        currentRepository,
       );
     } catch (error) {
       console.warn(
