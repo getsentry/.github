@@ -67,6 +67,10 @@ jobs:
             echo "Invalid repository: $TARGET_REPOSITORY" >&2
             exit 2
           fi
+          if [[ ! "$owner" =~ ^[A-Za-z0-9-]+$ || ! "$name" =~ ^[A-Za-z0-9._-]+$ ]]; then
+            echo "Invalid repository: $TARGET_REPOSITORY" >&2
+            exit 2
+          fi
           if [ "$owner" != "$EXPECTED_OWNER" ]; then
             echo "Repository must belong to $EXPECTED_OWNER: $TARGET_REPOSITORY" >&2
             exit 2
@@ -77,6 +81,7 @@ jobs:
           fi
           echo "owner=$owner" >> "$GITHUB_OUTPUT"
           echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "repository=$owner/$name" >> "$GITHUB_OUTPUT"
           echo "automation-ref=$automation_ref" >> "$GITHUB_OUTPUT"
 
       - name: Checkout org automation
@@ -88,11 +93,13 @@ jobs:
           persist-credentials: false
 
       - name: Check Flue feature registry
+        env:
+          TARGET_REPOSITORY: ${{ steps.target.outputs.repository }}
         run: |
           node automation/.github/scripts/check-flue-feature.mjs \
             automation/.github/flue/features.json \
             issue-triage \
-            "${{ inputs.repository }}"
+            "$TARGET_REPOSITORY"
 
       - name: Validate Flue configuration
         env:
@@ -117,7 +124,7 @@ jobs:
         if: ${{ inputs['target-ref'] == '' }}
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          repository: ${{ inputs.repository }}
+          repository: ${{ steps.target.outputs.repository }}
           path: target-repo
           fetch-depth: 0
           persist-credentials: false
@@ -126,7 +133,7 @@ jobs:
         if: ${{ inputs['target-ref'] != '' }}
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          repository: ${{ inputs.repository }}
+          repository: ${{ steps.target.outputs.repository }}
           ref: ${{ inputs['target-ref'] }}
           path: target-repo
           fetch-depth: 0
@@ -155,6 +162,8 @@ jobs:
           FLUE_OPENAI_API_KEY: ${{ secrets.FLUE_OPENAI_API_KEY }}
           FLUE_TRIAGE_MODEL: ${{ vars.FLUE_TRIAGE_MODEL }}
           FLUE_TARGET_REPO_PATH: ${{ github.workspace }}/target-repo
+          ISSUE_NUMBER: ${{ inputs.issue-number }}
+          TARGET_REPOSITORY: ${{ steps.target.outputs.repository }}
         run: |
-          pnpm run flue:issue-triage --id "issue-triage-${{ inputs['issue-number'] }}" \
-            --payload '{"issueNumber": ${{ inputs['issue-number'] }}, "repository": "${{ inputs.repository }}"}'
+          payload="$(node -e 'console.log(JSON.stringify({issueNumber: Number(process.env.ISSUE_NUMBER), repository: process.env.TARGET_REPOSITORY}))')"
+          pnpm run flue:issue-triage --id "issue-triage-${ISSUE_NUMBER}" --payload "$payload"
