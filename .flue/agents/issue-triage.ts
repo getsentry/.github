@@ -58,6 +58,13 @@ const duplicateSearchSchema = v.object({
 });
 type DuplicateSearch = v.InferOutput<typeof duplicateSearchSchema>;
 type DuplicateCandidate = v.InferOutput<typeof duplicateCandidateSchema>;
+type DuplicateClosureResult = {
+  labelsApplied: string[];
+  commentPosted: boolean;
+  closed: boolean;
+  closeAsNotPlanned: boolean;
+  failureSummary?: string;
+};
 
 const diagnosisSchema = v.object({
   severity: severitySchema,
@@ -481,30 +488,71 @@ async function closeDuplicate(
   context: IssueContext,
   duplicate: DuplicateCandidate,
   canonicalIssue?: unknown,
-) {
+): Promise<DuplicateClosureResult> {
   const duplicateLabel = findDuplicateLabel(context);
-  const labelsApplied = duplicateLabel
-    ? await applyLabels(session, context, [duplicateLabel])
-    : [];
-  const closeAsNotPlanned = wasClosedAsNotPlanned(canonicalIssue);
-  const comment = buildDuplicateClosureComment(duplicate, closeAsNotPlanned);
+  let failureSummary: string | undefined;
+  let labelsApplied: string[] = [];
 
-  await postComment(session, context, comment);
-  if (closeAsNotPlanned) {
-    await runGhCommand(
-      session,
-      `gh issue close ${context.issueNumber}${repoArg(context.repository)} --reason ${shellQuote("not planned")}`,
-      "Closing issue as not planned",
-    );
-  } else {
-    await runGhCommand(
-      session,
-      `gh issue close ${context.issueNumber}${repoArg(context.repository)} --reason duplicate --duplicate-of ${duplicate.number}`,
-      "Closing duplicate issue",
-    );
+  if (duplicateLabel) {
+    try {
+      labelsApplied = await applyLabels(session, context, [duplicateLabel]);
+    } catch (error) {
+      failureSummary = `Applying duplicate label failed: ${summarizeAgentFailure(error)}`;
+      console.warn(`[issue-triage] ${failureSummary}`);
+    }
   }
 
-  return labelsApplied;
+  const closeAsNotPlanned = wasClosedAsNotPlanned(canonicalIssue);
+  const comment = buildDuplicateClosureComment(duplicate, closeAsNotPlanned);
+  let commentPosted = false;
+
+  try {
+    commentPosted = await postComment(session, context, comment);
+  } catch (error) {
+    const summary = `Posting duplicate closure comment failed: ${summarizeAgentFailure(error)}`;
+    failureSummary = failureSummary
+      ? `${failureSummary}; ${summary}`
+      : summary;
+    console.warn(`[issue-triage] ${summary}`);
+  }
+
+  try {
+    if (closeAsNotPlanned) {
+      await runGhCommand(
+        session,
+        `gh issue close ${context.issueNumber}${repoArg(context.repository)} --reason ${shellQuote("not planned")}`,
+        "Closing issue as not planned",
+      );
+    } else {
+      await runGhCommand(
+        session,
+        `gh issue close ${context.issueNumber}${repoArg(context.repository)} --reason duplicate --duplicate-of ${duplicate.number}`,
+        "Closing duplicate issue",
+      );
+    }
+
+    return {
+      labelsApplied,
+      commentPosted,
+      closed: true,
+      closeAsNotPlanned,
+      failureSummary,
+    };
+  } catch (error) {
+    const summary = `Closing duplicate issue failed: ${summarizeAgentFailure(error)}`;
+    failureSummary = failureSummary
+      ? `${failureSummary}; ${summary}`
+      : summary;
+    console.warn(`[issue-triage] ${summary}`);
+  }
+
+  return {
+    labelsApplied,
+    commentPosted,
+    closed: false,
+    closeAsNotPlanned,
+    failureSummary,
+  };
 }
 
 function buildIssueUpdateComment(
@@ -831,32 +879,43 @@ export default async function ({ init, payload }: FlueContext) {
         `[issue-triage] Canonical duplicate lookup failed: ${summarizeAgentFailure(error)}`,
       );
     }
-    const closedAsNotPlanned = wasClosedAsNotPlanned(canonicalIssue);
-
-    const labelsApplied = await closeDuplicate(
+    const closure = await closeDuplicate(
       session,
       closureContext,
       duplicateSearch.duplicate,
       canonicalIssue,
     );
+    const closureResult = closure.closed
+      ? closure.closeAsNotPlanned
+        ? "closed_as_not_planned"
+        : "closed"
+      : "failed";
+    const summary = closure.closed
+      ? closure.closeAsNotPlanned
+        ? `Closed as not planned because #${duplicateSearch.duplicate.number} was already closed as not planned.`
+        : `Closed as a duplicate of #${duplicateSearch.duplicate.number}.`
+      : `Found duplicate #${duplicateSearch.duplicate.number}, but automatic closure failed: ${closure.failureSummary ?? "unknown error"}.`;
 
     return {
-      outcome: closedAsNotPlanned
-        ? "duplicate_closed_as_not_planned"
-        : "duplicate_closed",
+      outcome: closure.closed
+        ? closure.closeAsNotPlanned
+          ? "duplicate_closed_as_not_planned"
+          : "duplicate_closed"
+        : "needs_human_review",
       steps: [
         { name: "search-duplicates", result: duplicateSearch.status },
         {
           name: "close-duplicate",
-          result: closedAsNotPlanned ? "closed_as_not_planned" : "closed",
+          result: closure.failureSummary
+            ? `${closureResult}: ${closure.failureSummary}`
+            : closureResult,
         },
       ],
       duplicate: duplicateSearch.duplicate,
-      labels_applied: labelsApplied,
-      comment_posted: true,
-      summary: closedAsNotPlanned
-        ? `Closed as not planned because #${duplicateSearch.duplicate.number} was already closed as not planned.`
-        : `Closed as a duplicate of #${duplicateSearch.duplicate.number}.`,
+      labels_applied: closure.labelsApplied,
+      comment_posted: closure.commentPosted,
+      needs_human_review: !closure.closed,
+      summary,
     };
   }
 
