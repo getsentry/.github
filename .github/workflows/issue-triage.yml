@@ -1,6 +1,9 @@
 name: Issue Triage
 
 on:
+  issues:
+    types: [opened]
+
   workflow_dispatch:
     inputs:
       issue-number:
@@ -23,28 +26,6 @@ on:
         type: string
         default: ""
 
-  workflow_call:
-    inputs:
-      issue-number:
-        required: true
-        type: number
-      repository:
-        required: true
-        type: string
-      target-ref:
-        required: false
-        type: string
-        default: ""
-      automation-ref:
-        required: false
-        type: string
-        default: main
-    secrets:
-      FLUE_PRIVATE_KEY:
-        required: true
-      FLUE_OPENAI_API_KEY:
-        required: true
-
 jobs:
   triage:
     runs-on: ubuntu-latest
@@ -56,8 +37,10 @@ jobs:
       - name: Resolve target repository
         id: target
         env:
-          TARGET_REPOSITORY: ${{ inputs.repository }}
-          AUTOMATION_REF: ${{ inputs['automation-ref'] }}
+          TARGET_REPOSITORY: ${{ github.event_name == 'workflow_dispatch' && inputs.repository || github.repository }}
+          TARGET_ISSUE_NUMBER: ${{ github.event_name == 'workflow_dispatch' && inputs['issue-number'] || github.event.issue.number }}
+          TARGET_REF: ${{ github.event_name == 'workflow_dispatch' && inputs['target-ref'] || '' }}
+          AUTOMATION_REF: ${{ github.event_name == 'workflow_dispatch' && inputs['automation-ref'] || github.ref_name }}
           EXPECTED_OWNER: ${{ github.repository_owner }}
           WORKFLOW_REF_NAME: ${{ github.ref_name }}
         run: |
@@ -75,20 +58,34 @@ jobs:
             echo "Repository must belong to $EXPECTED_OWNER: $TARGET_REPOSITORY" >&2
             exit 2
           fi
+          if [[ ! "$TARGET_ISSUE_NUMBER" =~ ^[1-9][0-9]*$ ]]; then
+            echo "Invalid issue number: $TARGET_ISSUE_NUMBER" >&2
+            exit 2
+          fi
           automation_ref="$AUTOMATION_REF"
           if [ -z "$automation_ref" ]; then
             automation_ref="$WORKFLOW_REF_NAME"
           fi
+          if [[ ! "$TARGET_REF" =~ ^[A-Za-z0-9._/-]*$ ]]; then
+            echo "Invalid target ref: $TARGET_REF" >&2
+            exit 2
+          fi
+          if [[ ! "$automation_ref" =~ ^[A-Za-z0-9._/-]+$ ]]; then
+            echo "Invalid automation ref: $automation_ref" >&2
+            exit 2
+          fi
           echo "owner=$owner" >> "$GITHUB_OUTPUT"
           echo "name=$name" >> "$GITHUB_OUTPUT"
           echo "repository=$owner/$name" >> "$GITHUB_OUTPUT"
+          echo "issue-number=$TARGET_ISSUE_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "target-ref=$TARGET_REF" >> "$GITHUB_OUTPUT"
           echo "automation-ref=$automation_ref" >> "$GITHUB_OUTPUT"
 
       - name: Checkout org automation
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: ${{ github.repository_owner }}/.github
-          ref: ${{ steps.target.outputs.automation-ref }}
+          ref: ${{ steps.target.outputs['automation-ref'] }}
           path: automation
           persist-credentials: false
 
@@ -121,7 +118,7 @@ jobs:
           permission-issues: write
 
       - name: Checkout target repository
-        if: ${{ inputs['target-ref'] == '' }}
+        if: ${{ steps.target.outputs['target-ref'] == '' }}
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: ${{ steps.target.outputs.repository }}
@@ -130,11 +127,11 @@ jobs:
           persist-credentials: false
 
       - name: Checkout target repository at ref
-        if: ${{ inputs['target-ref'] != '' }}
+        if: ${{ steps.target.outputs['target-ref'] != '' }}
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: ${{ steps.target.outputs.repository }}
-          ref: ${{ inputs['target-ref'] }}
+          ref: ${{ steps.target.outputs['target-ref'] }}
           path: target-repo
           fetch-depth: 0
           persist-credentials: false
@@ -162,8 +159,14 @@ jobs:
           FLUE_OPENAI_API_KEY: ${{ secrets.FLUE_OPENAI_API_KEY }}
           FLUE_TRIAGE_MODEL: ${{ vars.FLUE_TRIAGE_MODEL }}
           FLUE_TARGET_REPO_PATH: ${{ github.workspace }}/target-repo
-          ISSUE_NUMBER: ${{ inputs.issue-number }}
+          ISSUE_NUMBER: ${{ steps.target.outputs['issue-number'] }}
           TARGET_REPOSITORY: ${{ steps.target.outputs.repository }}
         run: |
-          payload="$(node -e 'console.log(JSON.stringify({issueNumber: Number(process.env.ISSUE_NUMBER), repository: process.env.TARGET_REPOSITORY}))')"
+          payload="$(
+            node <<'NODE'
+          const issueNumber = Number(process.env.ISSUE_NUMBER);
+          const repository = process.env.TARGET_REPOSITORY;
+          process.stdout.write(JSON.stringify({ issueNumber, repository }));
+          NODE
+          )"
           pnpm run flue:issue-triage --id "issue-triage-${ISSUE_NUMBER}" --payload "$payload"
