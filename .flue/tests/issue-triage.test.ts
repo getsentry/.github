@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildDuplicateClosureComment,
+  hasDuplicateOfFlag,
   hasIssueTriageBotIntro,
   wasClosedAsNotPlanned,
   withIssueTriageBotIntro,
@@ -73,5 +74,12 @@ describe("duplicate closure", () => {
     expect(buildDuplicateClosureComment(duplicate, true)).toContain(
       "already closed as not planned",
     );
+  });
+
+  it("detects whether gh can link duplicate closures", () => {
+    expect(hasDuplicateOfFlag("      --duplicate-of int   Issue number")).toBe(
+      true,
+    );
+    expect(hasDuplicateOfFlag("      --reason string      Reason")).toBe(false);
   });
 });

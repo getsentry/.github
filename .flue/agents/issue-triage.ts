@@ -354,6 +354,27 @@ async function runGhCommand(
   }
 }
 
+export function hasDuplicateOfFlag(helpText: string) {
+  return helpText.includes("--duplicate-of");
+}
+
+let duplicateOfFlagSupported: boolean | undefined;
+
+async function supportsDuplicateOfFlag(session: FlueSession) {
+  if (duplicateOfFlagSupported !== undefined) {
+    return duplicateOfFlagSupported;
+  }
+
+  const result = await session.shell("gh issue close --help", {
+    commands: [gh],
+    timeout: 60_000,
+  });
+  duplicateOfFlagSupported =
+    result.exitCode === 0 && hasDuplicateOfFlag(`${result.stdout}\n${result.stderr}`);
+
+  return duplicateOfFlagSupported;
+}
+
 async function withGhBodyFile<T>(
   prefix: string,
   body: string,
@@ -524,9 +545,13 @@ async function closeDuplicate(
         "Closing issue as not planned",
       );
     } else {
+      const canLinkDuplicate = await supportsDuplicateOfFlag(session);
+      const duplicateOfArg = canLinkDuplicate
+        ? ` --duplicate-of ${duplicate.number}`
+        : "";
       await runGhCommand(
         session,
-        `gh issue close ${context.issueNumber}${repoArg(context.repository)} --reason duplicate --duplicate-of ${duplicate.number}`,
+        `gh issue close ${context.issueNumber}${repoArg(context.repository)} --reason duplicate${duplicateOfArg}`,
         "Closing duplicate issue",
       );
     }
