@@ -60,7 +60,7 @@ jobs:
           TARGET_ISSUE_NUMBER: ${{ inputs['issue-number'] }}
           TARGET_REF: ${{ inputs['target-ref'] }}
           AUTOMATION_REF: ${{ inputs['automation-ref'] }}
-          EXPECTED_OWNER: ${{ github.repository_owner }}
+          EXPECTED_OWNER: getsentry
           CALLER_REPOSITORY: ${{ github.repository }}
           EVENT_NAME: ${{ github.event_name }}
           WORKFLOW_REF_NAME: ${{ github.ref_name }}
@@ -109,7 +109,7 @@ jobs:
       - name: Checkout org automation
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          repository: ${{ github.repository_owner }}/.github
+          repository: getsentry/.github
           ref: ${{ steps.target.outputs['automation-ref'] }}
           path: automation
           persist-credentials: false
@@ -126,9 +126,19 @@ jobs:
       - name: Validate Flue configuration
         env:
           FLUE_CLIENT_ID: ${{ vars.FLUE_CLIENT_ID }}
+          FLUE_PRIVATE_KEY: ${{ secrets.FLUE_PRIVATE_KEY }}
+          FLUE_OPENAI_API_KEY: ${{ secrets.FLUE_OPENAI_API_KEY }}
         run: |
           if [ -z "$FLUE_CLIENT_ID" ]; then
             echo "Missing required FLUE_CLIENT_ID organization variable" >&2
+            exit 2
+          fi
+          if [ -z "$FLUE_PRIVATE_KEY" ]; then
+            echo "Missing required FLUE_PRIVATE_KEY organization secret" >&2
+            exit 2
+          fi
+          if [ -z "$FLUE_OPENAI_API_KEY" ]; then
+            echo "Missing required FLUE_OPENAI_API_KEY organization secret" >&2
             exit 2
           fi
 
@@ -138,7 +148,7 @@ jobs:
         with:
           client-id: ${{ vars.FLUE_CLIENT_ID }}
           private-key: ${{ secrets.FLUE_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
+          owner: getsentry
           repositories: ${{ steps.target.outputs.name }}
           permission-issues: write
 
@@ -164,6 +174,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
         with:
+          package_json_file: automation/package.json
           run_install: false
 
       - name: Setup Node.js

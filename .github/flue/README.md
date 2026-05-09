@@ -42,9 +42,10 @@ jobs:
 Repositories are still centrally gated by `features.json`. If a caller workflow
 is added to a repository that is not listed there, the reusable workflow exits
 before creating a Sentry Intern app token or checking out the target repository.
-For `workflow_call` runs, the requested repository must also match the caller
-repository. Manual dispatch from `.github` is the only path that can point the
-workflow at a different allowlisted repository for smoke testing.
+For `workflow_call` runs, the requested repository must also belong to
+`getsentry` and match the caller repository. Manual dispatch from `.github` is
+the only path that can point the workflow at a different allowlisted repository
+for smoke testing.
 
 ## Configuration
 
@@ -55,8 +56,11 @@ Required organization configuration:
 - `FLUE_OPENAI_API_KEY` secret for the model provider.
 
 Sentry Intern only needs the GitHub App `Issues: read and write` repository
-permission for triage comments, labels, issue edits, and issue closure. Source
-checkout uses the caller workflow's `GITHUB_TOKEN` with `contents: read`.
+permission for triage comments, labels, issue edits, and issue closure. GitHub
+Apps also receive read-only metadata access. Source checkout uses the caller
+workflow's `GITHUB_TOKEN` with `contents: read`; the current enabled
+repositories are public, so manual smoke-test checkouts from `.github` work
+without granting the app contents access.
 
 ## Testing
 

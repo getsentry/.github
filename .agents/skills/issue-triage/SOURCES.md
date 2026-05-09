@@ -6,6 +6,10 @@
 | --- | --- |
 | User request in this session | Defines required behavior: duplicate search and closure, repository checkout, diagnosis, validation, concise issue rewrites, issue-triage-bot identity in the first comment sentence, casually professional comment voice, and inheriting `not planned` closure from canonical duplicate issues. |
 | Flue README issue triage example | Confirms GitHub Actions + CLI-only Flue agent pattern, `sandbox: "local"`, staged skill calls, command grants, and structured Valibot results. |
+| GitHub Actions reusable workflow documentation | Confirms `workflow_call`, caller job `uses`, inherited secrets, caller-owned `github` context, and `GITHUB_TOKEN` permission downgrading behavior. |
+| GitHub Actions events and workflow template documentation | Confirms issue events run from workflows in the event repository and org `.github` templates are for creating local workflow files, not global event subscription. |
+| `actions/create-github-app-token`, `actions/checkout`, `actions/setup-node`, and `pnpm/action-setup` documentation | Confirms GitHub App token inputs, scoped repository tokens, checkout inputs, pnpm cache setup, and non-root `package_json_file` behavior. |
+| OpenAI API authentication documentation | Confirms the model provider key should stay secret and be loaded from server-side environment variables. |
 | `gh issue --help`, `gh issue view --help`, `gh issue edit --help`, `gh issue close --help`, `gh search issues --help`, `gh label list --help` | Confirms available GitHub CLI commands and flags for reading issues, searching duplicates, editing bodies, closing issues, and listing labels. |
 | Repository `AGENTS.md` | Supplies project workflow constraints, security expectations, and quality gate expectations. |
 
@@ -26,5 +30,5 @@
 
 ## Open Gaps
 
-- The first implementation does not run an end-to-end dry run against a real issue to confirm GitHub token permissions.
+- The first implementation does not run an end-to-end smoke test against a real issue to confirm GitHub token permissions.
 - Duplicate detection is agent-assisted and conservative; it may require follow-up tuning after observing real triage outcomes.

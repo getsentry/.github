@@ -4,6 +4,7 @@ import {
   buildDuplicateClosureComment,
   hasDuplicateOfFlag,
   hasIssueTriageBotIntro,
+  issueRepositoryFromUrl,
   wasClosedAsNotPlanned,
   withIssueTriageBotIntro,
 } from "../agents/issue-triage";
@@ -81,5 +82,14 @@ describe("duplicate closure", () => {
       true,
     );
     expect(hasDuplicateOfFlag("      --reason string      Reason")).toBe(false);
+  });
+
+  it("extracts the repository from GitHub issue URLs", () => {
+    expect(
+      issueRepositoryFromUrl(
+        "https://github.com/getsentry/sentry-mcp/issues/950",
+      ),
+    ).toBe("getsentry/sentry-mcp");
+    expect(issueRepositoryFromUrl("https://example.com/issues/950")).toBeNull();
   });
 });

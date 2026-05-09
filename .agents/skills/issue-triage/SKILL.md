@@ -51,6 +51,7 @@ Goal: determine whether the new issue is a confirmed duplicate.
    - Search open and closed issues in the same repository with `gh search issues --repo <repository>`.
    - Add `--limit 10` to every `gh search issues` command.
    - Exclude the current issue number from candidates.
+   - Only mark same-repository issues as duplicates. A cross-repository issue can be related context, but it must not be returned as `duplicate`.
 3. Keep search terms specific.
    - Do not search generic language, stack, or repo terms by themselves, such as `typescript`, `javascript`, `python`, `rust`, `language`, `rewrite`, `error`, or `timeout`.
    - For low-signal rewrite requests like "rewrite in Rust" with body "because Rust is good", search only the exact title and exact distinctive body phrase. Do not fan out to generic terms.

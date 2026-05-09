@@ -298,6 +298,24 @@ function normalizeStateReason(value: unknown) {
   return value.toLowerCase().replace(/[\s-]+/g, "_");
 }
 
+export function issueRepositoryFromUrl(url: string) {
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname !== "github.com") {
+      return null;
+    }
+
+    const [owner, name, type] = parsed.pathname.split("/").filter(Boolean);
+    if (!owner || !name || type !== "issues") {
+      return null;
+    }
+
+    return `${owner}/${name}`;
+  } catch {
+    return null;
+  }
+}
+
 export function wasClosedAsNotPlanned(issue: unknown) {
   if (!isRecord(issue)) {
     return false;
@@ -885,6 +903,31 @@ export default async function ({ init, payload }: FlueContext) {
       throw new Error(
         `Duplicate search returned duplicate status without a canonical issue for #${issueNumber}.`,
       );
+    }
+
+    const duplicateRepository = issueRepositoryFromUrl(
+      duplicateSearch.duplicate.url,
+    );
+    if (repository && duplicateRepository !== repository) {
+      return {
+        outcome: "needs_human_review",
+        steps: [
+          { name: "search-duplicates", result: duplicateSearch.status },
+          {
+            name: "validate-duplicate",
+            result: duplicateRepository
+              ? `cross-repo candidate from ${duplicateRepository}`
+              : "candidate URL did not identify a same-repo GitHub issue",
+          },
+        ],
+        duplicate: duplicateSearch.duplicate,
+        labels_applied: [],
+        comment_posted: false,
+        needs_human_review: true,
+        summary: duplicateRepository
+          ? `Found duplicate candidate #${duplicateSearch.duplicate.number} in ${duplicateRepository}, but automatic closure only supports same-repo duplicates.`
+          : `Found duplicate candidate #${duplicateSearch.duplicate.number}, but its URL could not be validated as a same-repo issue.`,
+      };
     }
 
     const closureContext = await readIssueContext(
