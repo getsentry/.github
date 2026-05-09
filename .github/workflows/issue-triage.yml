@@ -1,9 +1,6 @@
 name: Issue Triage
 
 on:
-  issues:
-    types: [opened]
-
   workflow_dispatch:
     inputs:
       issue-number:
@@ -26,6 +23,28 @@ on:
         type: string
         default: ""
 
+  workflow_call:
+    inputs:
+      issue-number:
+        required: true
+        type: number
+      repository:
+        required: true
+        type: string
+      target-ref:
+        required: false
+        type: string
+        default: ""
+      automation-ref:
+        required: false
+        type: string
+        default: main
+    secrets:
+      FLUE_PRIVATE_KEY:
+        required: true
+      FLUE_OPENAI_API_KEY:
+        required: true
+
 jobs:
   triage:
     runs-on: ubuntu-latest
@@ -37,11 +56,13 @@ jobs:
       - name: Resolve target repository
         id: target
         env:
-          TARGET_REPOSITORY: ${{ github.event_name == 'workflow_dispatch' && inputs.repository || github.repository }}
-          TARGET_ISSUE_NUMBER: ${{ github.event_name == 'workflow_dispatch' && inputs['issue-number'] || github.event.issue.number }}
-          TARGET_REF: ${{ github.event_name == 'workflow_dispatch' && inputs['target-ref'] || '' }}
-          AUTOMATION_REF: ${{ github.event_name == 'workflow_dispatch' && inputs['automation-ref'] || github.ref_name }}
+          TARGET_REPOSITORY: ${{ inputs.repository }}
+          TARGET_ISSUE_NUMBER: ${{ inputs['issue-number'] }}
+          TARGET_REF: ${{ inputs['target-ref'] }}
+          AUTOMATION_REF: ${{ inputs['automation-ref'] }}
           EXPECTED_OWNER: ${{ github.repository_owner }}
+          CALLER_REPOSITORY: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
           WORKFLOW_REF_NAME: ${{ github.ref_name }}
         run: |
           owner="${TARGET_REPOSITORY%%/*}"
@@ -56,6 +77,10 @@ jobs:
           fi
           if [ "$owner" != "$EXPECTED_OWNER" ]; then
             echo "Repository must belong to $EXPECTED_OWNER: $TARGET_REPOSITORY" >&2
+            exit 2
+          fi
+          if [ "$EVENT_NAME" = "workflow_call" ] && [ "$TARGET_REPOSITORY" != "$CALLER_REPOSITORY" ]; then
+            echo "Reusable workflow caller must target itself: $CALLER_REPOSITORY tried $TARGET_REPOSITORY" >&2
             exit 2
           fi
           if [[ ! "$TARGET_ISSUE_NUMBER" =~ ^[1-9][0-9]*$ ]]; then

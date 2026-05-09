@@ -6,18 +6,45 @@ This directory holds org-level Flue automation configuration.
 
 Issue triage is implemented by:
 
-- `.github/workflows/issue-triage.yml`: org issue event and manual GitHub
-  Actions workflow.
+- `.github/workflows/issue-triage.yml`: reusable/manual GitHub Actions
+  workflow.
 - `.flue/agents/issue-triage.ts`: Flue CLI agent wrapper and deterministic
   GitHub mutations.
 - `.agents/skills/issue-triage/SKILL.md`: model instructions for duplicate
   search, diagnosis, comment voice, and issue rewrite decisions.
 - `.github/flue/features.json`: central feature allowlist by repository.
 
-The workflow subscribes to newly opened issues from the org automation repo.
-Repositories are centrally gated by `features.json`; if a repository is not
-listed there, the workflow exits before creating a Sentry Intern app token or
-checking out the target repository.
+GitHub Actions workflows run from `.github/workflows` in the repository where
+the event occurs. The org `.github` repository can host reusable workflows and
+workflow templates, but it does not automatically subscribe this workflow to
+issue events in every repository.
+
+Each target repository needs a tiny local caller workflow:
+
+```yaml
+name: Issue Triage
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  triage:
+    permissions:
+      contents: read
+    uses: getsentry/.github/.github/workflows/issue-triage.yml@main
+    with:
+      issue-number: ${{ github.event.issue.number }}
+      repository: ${{ github.repository }}
+    secrets: inherit
+```
+
+Repositories are still centrally gated by `features.json`. If a caller workflow
+is added to a repository that is not listed there, the reusable workflow exits
+before creating a Sentry Intern app token or checking out the target repository.
+For `workflow_call` runs, the requested repository must also match the caller
+repository. Manual dispatch from `.github` is the only path that can point the
+workflow at a different allowlisted repository for smoke testing.
 
 ## Configuration
 
@@ -29,7 +56,7 @@ Required organization configuration:
 
 Sentry Intern only needs the GitHub App `Issues: read and write` repository
 permission for triage comments, labels, issue edits, and issue closure. Source
-checkout uses the workflow's `GITHUB_TOKEN` with `contents: read`.
+checkout uses the caller workflow's `GITHUB_TOKEN` with `contents: read`.
 
 ## Testing
 
