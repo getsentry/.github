@@ -6,6 +6,8 @@ import type { FlueSession } from "@flue/sdk/client";
 
 import {
   buildDuplicateClosureComment,
+  buildDuplicateCloseArgs,
+  hasDuplicateReason,
   hasDuplicateOfFlag,
   hasIssueTriageBotIntro,
   issueRepositoryFromIssue,
@@ -57,7 +59,10 @@ describe("issue triage comments", () => {
       "Hello, I'm the issue triage bot.\n\nI cleaned this up for maintainers.";
 
     assert.equal(hasIssueTriageBotIntro(body), false);
-    assert.match(withIssueTriageBotIntro(body) ?? "", /^:wave: I'm Sentry Intern/);
+    assert.match(
+      withIssueTriageBotIntro(body) ?? "",
+      /^:wave: I'm Sentry Intern/,
+    );
   });
 
   it("prepends the greeting when only a later sentence identifies the bot", () => {
@@ -65,7 +70,10 @@ describe("issue triage comments", () => {
       "Thanks for the report. I'm Sentry Intern, the issue triage bot, and found a duplicate.";
 
     assert.equal(hasIssueTriageBotIntro(body), false);
-    assert.match(withIssueTriageBotIntro(body) ?? "", /^:wave: I'm Sentry Intern/);
+    assert.match(
+      withIssueTriageBotIntro(body) ?? "",
+      /^:wave: I'm Sentry Intern/,
+    );
   });
 });
 
@@ -103,6 +111,36 @@ describe("duplicate closure", () => {
       true,
     );
     assert.equal(hasDuplicateOfFlag("      --reason string      Reason"), false);
+  });
+
+  it("detects whether gh supports duplicate close reasons", () => {
+    assert.equal(
+      hasDuplicateReason(
+        "      --reason string   Reason for closing: {completed|not planned|duplicate}",
+      ),
+      true,
+    );
+    assert.equal(hasDuplicateReason("      --reason string      Reason"), false);
+  });
+
+  it("prefers linked duplicate closure when gh supports it", () => {
+    assert.equal(
+      buildDuplicateCloseArgs(
+        duplicate.number,
+        "      --duplicate-of int   Issue number\n      --reason string",
+      ),
+      " --duplicate-of 950",
+    );
+  });
+
+  it("falls back to duplicate close reason for older gh versions", () => {
+    assert.equal(
+      buildDuplicateCloseArgs(
+        duplicate.number,
+        "      --reason string   Reason for closing: {completed|not planned|duplicate}",
+      ),
+      " --reason duplicate",
+    );
   });
 
   it("extracts the repository from GitHub issue URLs", () => {

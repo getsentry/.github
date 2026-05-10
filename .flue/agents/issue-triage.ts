@@ -385,22 +385,41 @@ export function hasDuplicateOfFlag(helpText: string) {
   return helpText.includes("--duplicate-of");
 }
 
-let duplicateOfFlagSupported: boolean | undefined;
+export function hasDuplicateReason(helpText: string) {
+  return /Reason for closing: \{[^}]*\bduplicate\b[^}]*\}/.test(helpText);
+}
 
-async function supportsDuplicateOfFlag(session: FlueSession) {
-  if (duplicateOfFlagSupported !== undefined) {
-    return duplicateOfFlagSupported;
+export function buildDuplicateCloseArgs(duplicateNumber: number, helpText: string) {
+  if (hasDuplicateOfFlag(helpText)) {
+    return ` --duplicate-of ${duplicateNumber}`;
+  }
+
+  if (hasDuplicateReason(helpText)) {
+    return " --reason duplicate";
+  }
+
+  throw new Error("Installed gh CLI cannot close issues as duplicates.");
+}
+
+let issueCloseHelpText: string | undefined;
+
+async function getIssueCloseHelpText(session: FlueSession) {
+  if (issueCloseHelpText !== undefined) {
+    return issueCloseHelpText;
   }
 
   const result = await session.shell("gh issue close --help", {
     commands: [gh],
     timeout: 60_000,
   });
-  duplicateOfFlagSupported =
-    result.exitCode === 0 &&
-    hasDuplicateOfFlag(`${result.stdout}\n${result.stderr}`);
+  if (result.exitCode !== 0) {
+    throw new Error(
+      `Checking gh issue close support failed: ${result.stderr || result.stdout}`,
+    );
+  }
 
-  return duplicateOfFlagSupported;
+  issueCloseHelpText = `${result.stdout}\n${result.stderr}`;
+  return issueCloseHelpText;
 }
 
 async function withGhBodyFile<T>(
@@ -571,13 +590,13 @@ async function closeDuplicate(
         "Closing issue as not planned",
       );
     } else {
-      const canLinkDuplicate = await supportsDuplicateOfFlag(session);
-      const duplicateOfArg = canLinkDuplicate
-        ? ` --duplicate-of ${duplicate.number}`
-        : "";
+      const closeArgs = buildDuplicateCloseArgs(
+        duplicate.number,
+        await getIssueCloseHelpText(session),
+      );
       await runGhCommand(
         session,
-        `gh issue close ${context.issueNumber}${repoArg(context.repository)} --reason duplicate${duplicateOfArg}`,
+        `gh issue close ${context.issueNumber}${repoArg(context.repository)}${closeArgs}`,
         "Closing duplicate issue",
       );
     }
