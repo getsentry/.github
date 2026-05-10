@@ -1,10 +1,10 @@
 # Flue Automation
 
-This directory holds org-level Flue automation configuration.
+This directory holds shared Flue automation for Getsentry repositories.
 
 ## Issue Triage
 
-Issue triage is implemented by:
+Issue triage has three moving parts:
 
 - `.github/workflows/issue-triage.yml`: reusable/manual GitHub Actions
   workflow.
@@ -12,14 +12,9 @@ Issue triage is implemented by:
   GitHub mutations.
 - `.agents/skills/issue-triage/SKILL.md`: model instructions for duplicate
   search, diagnosis, comment voice, and issue rewrite decisions.
-- `.github/flue/features.json`: central feature allowlist by repository.
 
-GitHub Actions workflows run from `.github/workflows` in the repository where
-the event occurs. The org `.github` repository can host reusable workflows and
-workflow templates, but it does not automatically subscribe this workflow to
-issue events in every repository.
-
-Each target repository needs a tiny local caller workflow:
+GitHub Actions issue events run in the repository where the issue was opened, so
+each enabled repository still needs this tiny caller workflow:
 
 ```yaml
 name: Issue Triage
@@ -39,13 +34,10 @@ jobs:
     secrets: inherit
 ```
 
-Repositories are still centrally gated by `features.json`. If a caller workflow
-is added to a repository that is not listed there, the reusable workflow exits
-before creating a Sentry Intern app token or checking out the target repository.
-For `workflow_call` runs, the requested repository must also belong to
-`getsentry` and match the caller repository. Manual dispatch from `.github` is
-the only path that can point the workflow at a different allowlisted repository
-for smoke testing.
+The reusable workflow has an inline repository allowlist. For `workflow_call`
+runs, the requested repository must belong to `getsentry` and match the caller
+repository. Manual dispatch from `.github` can point at a different allowlisted
+repository for smoke testing.
 
 ## Configuration
 
@@ -55,29 +47,21 @@ Required organization configuration:
 - `FLUE_PRIVATE_KEY` secret for the Sentry Intern GitHub App.
 - `FLUE_OPENAI_API_KEY` secret for the model provider.
 
-Sentry Intern only needs the GitHub App `Issues: read and write` repository
-permission for triage comments, labels, issue edits, and issue closure. GitHub
-Apps also receive read-only metadata access. Source checkout uses the caller
-workflow's `GITHUB_TOKEN` with `contents: read`; the current enabled
-repositories are public, so manual smoke-test checkouts from `.github` work
-without granting the app contents access.
+Sentry Intern needs `Issues: read and write` repository permission. Source
+checkout uses the caller workflow's `GITHUB_TOKEN` with `contents: read`.
 
 ## Testing
-
-Local validation catches packaging and syntax problems before a PR lands:
 
 ```bash
 pnpm install --frozen-lockfile
 pnpm test
 pnpm exec flue build --target node
 ruby -e 'require "yaml"; ARGV.each { |f| YAML.load_file(f) }' .github/workflows/issue-triage.yml
-node .github/scripts/check-flue-feature.mjs .github/flue/features.json issue-triage getsentry/sentry-mcp
 git diff --check -- .
 ```
 
-The real smoke test is a manual workflow run against a specific disposable
-issue. This is not a dry run: it uses the Sentry Intern app token and may
-comment, edit, label, or close the issue.
+The real smoke test is a manual workflow run against a disposable issue. This is
+not a dry run: it can comment, edit, label, or close the issue.
 
 ```bash
 gh workflow run issue-triage.yml \
@@ -87,17 +71,15 @@ gh workflow run issue-triage.yml \
   -f issue-number=123
 ```
 
-Then inspect the run and issue:
+Inspect the run and issue afterward:
 
 ```bash
 gh run list --repo getsentry/.github --workflow issue-triage.yml --limit 1
 gh issue view 123 --repo getsentry/sentry-mcp --comments
 ```
 
-For the first landing, the workflow file must be merged to the default branch
-before `workflow_dispatch` can run. For later changes, dispatch the workflow
-from the branch under test and pass the same branch as `automation-ref` so the
-checkout uses the branch's Flue code:
+For branch testing after the workflow has landed, dispatch from the branch and
+pass the same branch as `automation-ref`:
 
 ```bash
 gh workflow run issue-triage.yml \

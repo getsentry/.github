@@ -773,124 +773,56 @@ async function isDirectory(path: string) {
   }
 }
 
-export async function prepareRepository(
-  session: FlueSession,
-  issueNumber: number,
-  repository?: string,
-) {
-  if (process.env.FLUE_TARGET_REPO_PATH) {
-    const repoPath = process.env.FLUE_TARGET_REPO_PATH;
-    if (!(await isDirectory(repoPath))) {
-      return {
-        checkoutAvailable: false,
-        repoPath: null,
-        remoteUrl: null,
-        headSha: null,
-        checkoutNote: `Target repository path is not available: ${repoPath}`,
-      };
-    }
-
-    const remote = await session.shell("git remote get-url origin", {
-      commands: [git],
-      cwd: repoPath,
-      timeout: 30_000,
-    });
-    const head = await session.shell("git rev-parse HEAD", {
-      commands: [git],
-      cwd: repoPath,
-      timeout: 30_000,
-    });
-
-    if (head.exitCode !== 0) {
-      return {
-        checkoutAvailable: false,
-        repoPath: null,
-        remoteUrl: null,
-        headSha: null,
-        checkoutNote: `Target repository checkout is not a git checkout: ${head.stderr || head.stdout}`,
-      };
-    }
-
+export async function prepareRepository(session: FlueSession) {
+  const repoPath = process.env.FLUE_TARGET_REPO_PATH;
+  if (!repoPath) {
     return {
-      checkoutAvailable: true,
-      repoPath,
-      remoteUrl: remote.exitCode === 0 ? remote.stdout.trim() : repository,
-      headSha: head.exitCode === 0 ? head.stdout.trim() : null,
-      checkoutNote:
-        "Using the target repository checkout prepared by GitHub Actions.",
+      checkoutAvailable: false,
+      repoPath: null,
+      remoteUrl: null,
+      headSha: null,
+      checkoutNote: "No target repository checkout path was provided.",
     };
   }
 
-  const root = await session.shell("git rev-parse --show-toplevel", {
+  if (!(await isDirectory(repoPath))) {
+    return {
+      checkoutAvailable: false,
+      repoPath: null,
+      remoteUrl: null,
+      headSha: null,
+      checkoutNote: `Target repository path is not available: ${repoPath}`,
+    };
+  }
+
+  const remote = await session.shell("git remote get-url origin", {
     commands: [git],
+    cwd: repoPath,
     timeout: 30_000,
   });
-
-  if (root.exitCode === 0) {
-    const repoPath = root.stdout.trim();
-    const remote = await session.shell("git remote get-url origin", {
-      commands: [git],
-      cwd: repoPath,
-      timeout: 30_000,
-    });
-    const head = await session.shell("git rev-parse HEAD", {
-      commands: [git],
-      cwd: repoPath,
-      timeout: 30_000,
-    });
-
-    return {
-      checkoutAvailable: true,
-      repoPath,
-      remoteUrl: remote.exitCode === 0 ? remote.stdout.trim() : null,
-      headSha: head.exitCode === 0 ? head.stdout.trim() : null,
-      checkoutNote: "Using the repository checkout prepared by GitHub Actions.",
-    };
-  }
-
-  if (!repository) {
-    return {
-      checkoutAvailable: false,
-      repoPath: null,
-      remoteUrl: null,
-      headSha: null,
-      checkoutNote:
-        "No repository checkout was available and no repository was provided.",
-    };
-  }
-
-  const clonePath = `.flue-issue-triage-${issueNumber}`;
-  const clone = await session.shell(
-    `gh repo clone ${shellQuote(repository)} ${shellQuote(clonePath)} -- --filter=blob:none`,
-    {
-      commands: [gh],
-      timeout: 300_000,
-    },
-  );
-
-  if (clone.exitCode !== 0) {
-    return {
-      checkoutAvailable: false,
-      repoPath: null,
-      remoteUrl: null,
-      headSha: null,
-      checkoutNote: `Repository clone failed: ${clone.stderr || clone.stdout}`,
-    };
-  }
-
   const head = await session.shell("git rev-parse HEAD", {
     commands: [git],
-    cwd: clonePath,
+    cwd: repoPath,
     timeout: 30_000,
   });
+
+  if (head.exitCode !== 0) {
+    return {
+      checkoutAvailable: false,
+      repoPath: null,
+      remoteUrl: null,
+      headSha: null,
+      checkoutNote: `Target repository checkout is not a git checkout: ${head.stderr || head.stdout}`,
+    };
+  }
 
   return {
     checkoutAvailable: true,
-    repoPath: clonePath,
-    remoteUrl: repository,
+    repoPath,
+    remoteUrl: remote.exitCode === 0 ? remote.stdout.trim() : null,
     headSha: head.exitCode === 0 ? head.stdout.trim() : null,
     checkoutNote:
-      "Cloned the repository with gh repo clone using the GitHub token.",
+      "Using the target repository checkout prepared by GitHub Actions.",
   };
 }
 
@@ -1028,11 +960,7 @@ export default async function ({ init, payload }: FlueContext) {
     };
   }
 
-  const repositoryContext = await prepareRepository(
-    session,
-    issueNumber,
-    repository,
-  );
+  const repositoryContext = await prepareRepository(session);
 
   const diagnosisContext = await readIssueContext(
     session,

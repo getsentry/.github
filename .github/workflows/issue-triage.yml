@@ -61,6 +61,7 @@ jobs:
           TARGET_REF: ${{ inputs['target-ref'] }}
           AUTOMATION_REF: ${{ inputs['automation-ref'] }}
           EXPECTED_OWNER: getsentry
+          ENABLED_REPOSITORIES: getsentry/cli getsentry/dotagents getsentry/junior getsentry/sentry-mcp getsentry/vitest-evals getsentry/warden
           CALLER_REPOSITORY: ${{ github.repository }}
           EVENT_NAME: ${{ github.event_name }}
           WORKFLOW_REF_NAME: ${{ github.ref_name }}
@@ -78,6 +79,10 @@ jobs:
           if [ "$owner" != "$EXPECTED_OWNER" ]; then
             echo "Repository must belong to $EXPECTED_OWNER: $TARGET_REPOSITORY" >&2
             exit 2
+          fi
+          if [[ " $ENABLED_REPOSITORIES " != *" $owner/$name "* ]]; then
+            echo "Issue triage is not enabled for $owner/$name" >&2
+            exit 1
           fi
           if [ "$EVENT_NAME" = "workflow_call" ] && [ "$TARGET_REPOSITORY" != "$CALLER_REPOSITORY" ]; then
             echo "Reusable workflow caller must target itself: $CALLER_REPOSITORY tried $TARGET_REPOSITORY" >&2
@@ -106,41 +111,13 @@ jobs:
           echo "target-ref=$TARGET_REF" >> "$GITHUB_OUTPUT"
           echo "automation-ref=$automation_ref" >> "$GITHUB_OUTPUT"
 
-      - name: Checkout org automation
+      - name: Checkout automation
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: getsentry/.github
           ref: ${{ steps.target.outputs['automation-ref'] }}
           path: automation
           persist-credentials: false
-
-      - name: Check Flue feature registry
-        env:
-          TARGET_REPOSITORY: ${{ steps.target.outputs.repository }}
-        run: |
-          node automation/.github/scripts/check-flue-feature.mjs \
-            automation/.github/flue/features.json \
-            issue-triage \
-            "$TARGET_REPOSITORY"
-
-      - name: Validate Flue configuration
-        env:
-          FLUE_CLIENT_ID: ${{ vars.FLUE_CLIENT_ID }}
-          FLUE_PRIVATE_KEY: ${{ secrets.FLUE_PRIVATE_KEY }}
-          FLUE_OPENAI_API_KEY: ${{ secrets.FLUE_OPENAI_API_KEY }}
-        run: |
-          if [ -z "$FLUE_CLIENT_ID" ]; then
-            echo "Missing required FLUE_CLIENT_ID organization variable" >&2
-            exit 2
-          fi
-          if [ -z "$FLUE_PRIVATE_KEY" ]; then
-            echo "Missing required FLUE_PRIVATE_KEY organization secret" >&2
-            exit 2
-          fi
-          if [ -z "$FLUE_OPENAI_API_KEY" ]; then
-            echo "Missing required FLUE_OPENAI_API_KEY organization secret" >&2
-            exit 2
-          fi
 
       - name: Create issue triage bot token
         id: issue-triage-app-token
@@ -198,11 +175,5 @@ jobs:
           ISSUE_NUMBER: ${{ steps.target.outputs['issue-number'] }}
           TARGET_REPOSITORY: ${{ steps.target.outputs.repository }}
         run: |
-          payload="$(
-            node <<'NODE'
-          const issueNumber = Number(process.env.ISSUE_NUMBER);
-          const repository = process.env.TARGET_REPOSITORY;
-          process.stdout.write(JSON.stringify({ issueNumber, repository }));
-          NODE
-          )"
+          payload="{\"issueNumber\":${ISSUE_NUMBER},\"repository\":\"${TARGET_REPOSITORY}\"}"
           pnpm run flue:issue-triage --id "issue-triage-${ISSUE_NUMBER}" --payload "$payload"

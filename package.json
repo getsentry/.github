@@ -6,31 +6,11 @@
   "packageManager": "pnpm@10.15.1",
   "scripts": {
     "flue:issue-triage": "flue run issue-triage --target node",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "lint": "pnpm run format:check && pnpm run lint:actions",
-    "lint:actions": "node .github/scripts/actionlint.mjs",
-    "prepare": "simple-git-hooks",
-    "test": "vitest run .flue/tests/issue-triage.test.ts"
+    "test": "node --test --experimental-strip-types .flue/tests/issue-triage.test.ts"
   },
   "dependencies": {
     "@flue/cli": "^0.3.11",
     "@flue/sdk": "^0.3.11",
     "valibot": "^1.4.0"
-  },
-  "devDependencies": {
-    "@tktco/node-actionlint": "1.6.0",
-    "@types/node": "^22.15.33",
-    "lint-staged": "17.0.3",
-    "prettier": "3.8.3",
-    "simple-git-hooks": "2.13.1",
-    "vitest": "^4.1.2"
-  },
-  "lint-staged": {
-    "*.{js,mjs,ts,json,md,yml,yaml,toml}": "prettier --check",
-    ".github/workflows/*.{yml,yaml}": "node .github/scripts/actionlint.mjs"
-  },
-  "simple-git-hooks": {
-    "pre-commit": "pnpm lint-staged"
   }
 }

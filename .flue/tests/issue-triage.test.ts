@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { afterEach, describe, expect, it } from "vitest";
+import assert from "node:assert/strict";
+import { afterEach, describe, it } from "node:test";
 import type { FlueSession } from "@flue/sdk/client";
 
 import {
@@ -12,7 +13,7 @@ import {
   prepareRepository,
   wasClosedAsNotPlanned,
   withIssueTriageBotIntro,
-} from "../agents/issue-triage";
+} from "../agents/issue-triage.ts";
 
 const originalTargetRepoPath = process.env.FLUE_TARGET_REPO_PATH;
 
@@ -35,85 +36,92 @@ const duplicate = {
 
 describe("issue triage comments", () => {
   it("prepends an issue triage bot greeting when the model omits one", () => {
-    expect(
+    assert.match(
       withIssueTriageBotIntro(
         "Thanks for the report. This appears to duplicate #950.",
       ),
-    ).toMatch(/^:wave: I'm Sentry Intern, the issue triage bot\./);
+      /^:wave: I'm Sentry Intern, the issue triage bot\./,
+    );
   });
 
   it("accepts varied wording when the first sentence identifies the bot", () => {
     const body =
       "Hello, I'm Sentry Intern, your triage bot.\n\nI cleaned this up for maintainers.";
 
-    expect(hasIssueTriageBotIntro(body)).toBe(true);
-    expect(withIssueTriageBotIntro(body)).toBe(body);
+    assert.equal(hasIssueTriageBotIntro(body), true);
+    assert.equal(withIssueTriageBotIntro(body), body);
   });
 
   it("prepends the greeting when the persona is missing", () => {
     const body =
       "Hello, I'm the issue triage bot.\n\nI cleaned this up for maintainers.";
 
-    expect(hasIssueTriageBotIntro(body)).toBe(false);
-    expect(withIssueTriageBotIntro(body)).toMatch(/^:wave: I'm Sentry Intern/);
+    assert.equal(hasIssueTriageBotIntro(body), false);
+    assert.match(withIssueTriageBotIntro(body) ?? "", /^:wave: I'm Sentry Intern/);
   });
 
   it("prepends the greeting when only a later sentence identifies the bot", () => {
     const body =
       "Thanks for the report. I'm Sentry Intern, the issue triage bot, and found a duplicate.";
 
-    expect(hasIssueTriageBotIntro(body)).toBe(false);
-    expect(withIssueTriageBotIntro(body)).toMatch(/^:wave: I'm Sentry Intern/);
+    assert.equal(hasIssueTriageBotIntro(body), false);
+    assert.match(withIssueTriageBotIntro(body) ?? "", /^:wave: I'm Sentry Intern/);
   });
 });
 
 describe("duplicate closure", () => {
   it("inherits not planned when the canonical issue was closed as wontfix", () => {
-    expect(
+    assert.equal(
       wasClosedAsNotPlanned({
         state: "CLOSED",
         stateReason: "NOT_PLANNED",
       }),
-    ).toBe(true);
+      true,
+    );
   });
 
   it("does not treat ordinary duplicate closure as not planned", () => {
-    expect(
+    assert.equal(
       wasClosedAsNotPlanned({
         state: "CLOSED",
         stateReason: "DUPLICATE",
       }),
-    ).toBe(false);
+      false,
+    );
   });
 
   it("explains not planned duplicate closure without using duplicate-only copy", () => {
-    expect(buildDuplicateClosureComment(duplicate, true)).toContain(
-      "already closed as not planned",
+    assert.match(
+      buildDuplicateClosureComment(duplicate, true),
+      /already closed as not planned/,
     );
   });
 
   it("detects whether gh can link duplicate closures", () => {
-    expect(hasDuplicateOfFlag("      --duplicate-of int   Issue number")).toBe(
+    assert.equal(
+      hasDuplicateOfFlag("      --duplicate-of int   Issue number"),
       true,
     );
-    expect(hasDuplicateOfFlag("      --reason string      Reason")).toBe(false);
+    assert.equal(hasDuplicateOfFlag("      --reason string      Reason"), false);
   });
 
   it("extracts the repository from GitHub issue URLs", () => {
-    expect(
+    assert.equal(
       issueRepositoryFromUrl(
         "https://github.com/getsentry/sentry-mcp/issues/950",
       ),
-    ).toBe("getsentry/sentry-mcp");
-    expect(issueRepositoryFromUrl("https://example.com/issues/950")).toBeNull();
+      "getsentry/sentry-mcp",
+    );
+    assert.equal(issueRepositoryFromUrl("https://example.com/issues/950"), null);
   });
 
   it("extracts the repository from GitHub issue objects", () => {
-    expect(
+    assert.equal(
       issueRepositoryFromIssue({
         url: "https://github.com/getsentry/sentry-mcp/issues/952",
       }),
-    ).toBe("getsentry/sentry-mcp");
+      "getsentry/sentry-mcp",
+    );
   });
 });
 
@@ -129,8 +137,9 @@ describe("repository preparation", () => {
       },
     } as unknown as FlueSession;
 
-    await expect(
-      prepareRepository(session, 1, "getsentry/sentry-mcp"),
-    ).resolves.toMatchObject({ checkoutAvailable: false, repoPath: null });
+    const result = await prepareRepository(session);
+
+    assert.equal(result.checkoutAvailable, false);
+    assert.equal(result.repoPath, null);
   });
 });
