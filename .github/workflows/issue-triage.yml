@@ -119,8 +119,18 @@ jobs:
           path: automation
           persist-credentials: false
 
-      - name: Create issue triage bot token
-        id: issue-triage-app-token
+      - name: Create issue triage read token
+        id: issue-triage-read-token
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
+        with:
+          client-id: ${{ vars.FLUE_CLIENT_ID }}
+          private-key: ${{ secrets.FLUE_PRIVATE_KEY }}
+          owner: getsentry
+          repositories: ${{ steps.target.outputs.name }}
+          permission-issues: read
+
+      - name: Create issue triage write token
+        id: issue-triage-write-token
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         with:
           client-id: ${{ vars.FLUE_CLIENT_ID }}
@@ -131,22 +141,24 @@ jobs:
 
       - name: Checkout target repository
         if: ${{ steps.target.outputs['target-ref'] == '' }}
+        continue-on-error: true
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: ${{ steps.target.outputs.repository }}
           path: target-repo
-          fetch-depth: 0
+          fetch-depth: 1
           persist-credentials: false
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Checkout target repository at ref
         if: ${{ steps.target.outputs['target-ref'] != '' }}
+        continue-on-error: true
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: ${{ steps.target.outputs.repository }}
           ref: ${{ steps.target.outputs['target-ref'] }}
           path: target-repo
-          fetch-depth: 0
+          fetch-depth: 1
           persist-credentials: false
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -170,7 +182,8 @@ jobs:
       - name: Run triage agent
         working-directory: automation
         env:
-          GH_TOKEN: ${{ steps.issue-triage-app-token.outputs.token }}
+          GH_TOKEN: ${{ steps.issue-triage-write-token.outputs.token }}
+          FLUE_READ_GH_TOKEN: ${{ steps.issue-triage-read-token.outputs.token }}
           FLUE_OPENAI_API_KEY: ${{ secrets.FLUE_OPENAI_API_KEY }}
           FLUE_TRIAGE_MODEL: ${{ vars.FLUE_TRIAGE_MODEL }}
           FLUE_TARGET_REPO_PATH: ${{ github.workspace }}/target-repo

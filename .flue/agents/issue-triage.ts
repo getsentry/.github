@@ -138,6 +138,11 @@ const gh = defineCommand("gh", {
     GH_TOKEN: process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN,
   },
 });
+const readOnlyGh = defineCommand("gh", {
+  env: process.env.FLUE_READ_GH_TOKEN
+    ? { GH_TOKEN: process.env.FLUE_READ_GH_TOKEN }
+    : {},
+});
 const git = defineCommand("git");
 const pnpm = defineCommand("pnpm");
 
@@ -300,18 +305,33 @@ function normalizeStateReason(value: unknown) {
 }
 
 export function issueRepositoryFromUrl(url: string) {
+  return issueReferenceFromUrl(url)?.repository ?? null;
+}
+
+export function issueReferenceFromUrl(url: string) {
   try {
     const parsed = new URL(url);
     if (parsed.hostname !== "github.com") {
       return null;
     }
 
-    const [owner, name, type] = parsed.pathname.split("/").filter(Boolean);
-    if (!owner || !name || type !== "issues") {
+    const [owner, name, type, number] = parsed.pathname
+      .split("/")
+      .filter(Boolean);
+    if (
+      !owner ||
+      !name ||
+      type !== "issues" ||
+      !number ||
+      !/^[1-9][0-9]*$/.test(number)
+    ) {
       return null;
     }
 
-    return `${owner}/${name}`;
+    return {
+      repository: `${owner}/${name}`,
+      number: Number(number),
+    };
   } catch {
     return null;
   }
@@ -323,6 +343,39 @@ export function issueRepositoryFromIssue(issue: unknown) {
   }
 
   return issueRepositoryFromUrl(issue.url);
+}
+
+export function validateDuplicateForAutomaticClosure(
+  issueNumber: number,
+  currentRepository: string | null,
+  duplicate: DuplicateCandidate,
+) {
+  if (!currentRepository) {
+    return "current issue repository could not be validated";
+  }
+
+  if (duplicate.confidence !== "high") {
+    return `candidate confidence was ${duplicate.confidence}`;
+  }
+
+  if (duplicate.number === issueNumber) {
+    return "candidate matched the current issue";
+  }
+
+  const reference = issueReferenceFromUrl(duplicate.url);
+  if (!reference) {
+    return "candidate URL did not identify a same-repo GitHub issue";
+  }
+
+  if (reference.repository !== currentRepository) {
+    return `cross-repo candidate from ${reference.repository}`;
+  }
+
+  if (reference.number !== duplicate.number) {
+    return "candidate URL did not match candidate issue number";
+  }
+
+  return null;
 }
 
 export function wasClosedAsNotPlanned(issue: unknown) {
@@ -711,7 +764,7 @@ function selectTriageComment(
   return diagnosis.triage_comment?.trim();
 }
 
-async function applyTriageUpdate(
+export async function applyTriageUpdate(
   session: FlueSession,
   context: IssueContext,
   diagnosis: v.InferOutput<typeof diagnosisSchema>,
@@ -724,6 +777,17 @@ async function applyTriageUpdate(
       comment_posted: false,
       needs_human_review: true,
       summary: "Skipped triage update because the issue is already closed.",
+    };
+  }
+
+  if (diagnosis.needs_human_review) {
+    return {
+      title_updated: false,
+      body_updated: false,
+      labels_applied: [],
+      comment_posted: false,
+      needs_human_review: true,
+      summary: "Skipped triage update because human review is required.",
     };
   }
 
@@ -882,7 +946,7 @@ export default async function ({ init, payload }: FlueContext) {
   });
   const session = await agent.session();
   enableEncryptedReasoning(session);
-  const commands = [gh, git, pnpm];
+  const commands = [readOnlyGh, git, pnpm];
 
   const initialContext = await readIssueContext(
     session,
@@ -898,7 +962,7 @@ export default async function ({ init, payload }: FlueContext) {
         repository,
         context: initialContext,
       },
-      commands: [gh],
+      commands: [readOnlyGh],
       result: duplicateSearchSchema,
       timeout: 300_000,
     });
@@ -918,32 +982,29 @@ export default async function ({ init, payload }: FlueContext) {
 
     const currentRepository =
       repository ?? issueRepositoryFromIssue(initialContext.issue);
-    const duplicateRepository = issueRepositoryFromUrl(
-      duplicateSearch.duplicate.url,
+    const duplicateValidationFailure = validateDuplicateForAutomaticClosure(
+      issueNumber,
+      currentRepository,
+      duplicateSearch.duplicate,
     );
-    if (!currentRepository || duplicateRepository !== currentRepository) {
+
+    if (duplicateValidationFailure || !currentRepository) {
       return {
         outcome: "needs_human_review",
         steps: [
           { name: "search-duplicates", result: duplicateSearch.status },
           {
             name: "validate-duplicate",
-            result: duplicateRepository
-              ? currentRepository
-                ? `cross-repo candidate from ${duplicateRepository}`
-                : "current issue repository could not be validated"
-              : "candidate URL did not identify a same-repo GitHub issue",
+            result:
+              duplicateValidationFailure ??
+              "current issue repository could not be validated",
           },
         ],
         duplicate: duplicateSearch.duplicate,
         labels_applied: [],
         comment_posted: false,
         needs_human_review: true,
-        summary: duplicateRepository
-          ? currentRepository
-            ? `Found duplicate candidate #${duplicateSearch.duplicate.number} in ${duplicateRepository}, but automatic closure only supports same-repo duplicates.`
-            : `Found duplicate candidate #${duplicateSearch.duplicate.number}, but the current issue repository could not be validated.`
-          : `Found duplicate candidate #${duplicateSearch.duplicate.number}, but its URL could not be validated as a same-repo issue.`,
+        summary: `Found duplicate candidate #${duplicateSearch.duplicate.number}, but it needs maintainer review before automatic closure.`,
       };
     }
 

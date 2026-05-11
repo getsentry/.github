@@ -5,6 +5,7 @@ import { afterEach, describe, it } from "node:test";
 import type { FlueSession } from "@flue/sdk/client";
 
 import {
+  applyTriageUpdate,
   buildDuplicateClosureComment,
   buildDuplicateCloseArgs,
   buildNotPlannedCloseArgs,
@@ -13,9 +14,11 @@ import {
   hasDuplicateOfFlag,
   hasNotPlannedReason,
   hasIssueTriageBotIntro,
+  issueReferenceFromUrl,
   issueRepositoryFromIssue,
   issueRepositoryFromUrl,
   prepareRepository,
+  validateDuplicateForAutomaticClosure,
   wasClosedAsNotPlanned,
   withIssueTriageBotIntro,
 } from "../agents/issue-triage.ts";
@@ -186,6 +189,22 @@ describe("duplicate closure", () => {
     assert.equal(issueRepositoryFromUrl("https://example.com/issues/950"), null);
   });
 
+  it("extracts repository and issue number from GitHub issue URLs", () => {
+    assert.deepEqual(
+      issueReferenceFromUrl(
+        "https://github.com/getsentry/sentry-mcp/issues/950",
+      ),
+      {
+        repository: "getsentry/sentry-mcp",
+        number: 950,
+      },
+    );
+    assert.equal(
+      issueReferenceFromUrl("https://github.com/getsentry/sentry-mcp/pull/950"),
+      null,
+    );
+  });
+
   it("extracts the repository from GitHub issue objects", () => {
     assert.equal(
       issueRepositoryFromIssue({
@@ -193,6 +212,81 @@ describe("duplicate closure", () => {
       }),
       "getsentry/sentry-mcp",
     );
+  });
+
+  it("requires high-confidence same-repo candidates before automatic closure", () => {
+    assert.equal(
+      validateDuplicateForAutomaticClosure(
+        100,
+        "getsentry/sentry-mcp",
+        duplicate,
+      ),
+      null,
+    );
+    assert.equal(
+      validateDuplicateForAutomaticClosure(100, "getsentry/sentry-mcp", {
+        ...duplicate,
+        confidence: "medium",
+      }),
+      "candidate confidence was medium",
+    );
+    assert.equal(
+      validateDuplicateForAutomaticClosure(950, "getsentry/sentry-mcp", duplicate),
+      "candidate matched the current issue",
+    );
+    assert.equal(
+      validateDuplicateForAutomaticClosure(100, "getsentry/sentry-mcp", {
+        ...duplicate,
+        url: "https://github.com/getsentry/sentry-mcp/issues/951",
+      }),
+      "candidate URL did not match candidate issue number",
+    );
+  });
+});
+
+describe("triage updates", () => {
+  it("does not mutate issues when human review is required", async () => {
+    const session = {
+      shell: async () => {
+        throw new Error("shell should not run when human review is required");
+      },
+    } as unknown as FlueSession;
+    const result = await applyTriageUpdate(
+      session,
+      {
+        issueNumber: 100,
+        repository: "getsentry/sentry-mcp",
+        issue: { state: "OPEN", title: "Old title", body: "Old body" },
+        labels: [{ name: "bug" }],
+        fetchedAt: "2026-05-11T00:00:00.000Z",
+      },
+      {
+        severity: "high",
+        category: "security",
+        disposition: "unclear",
+        rewrite_mode: "technical_diagnosis",
+        validity: "unclear",
+        summary: "Needs maintainer review.",
+        evidence: [],
+        labels_to_apply: ["bug"],
+        should_comment: true,
+        should_update_issue: true,
+        proposed_title: "New title",
+        proposed_body: "New body",
+        triage_comment: "Needs review.",
+        update_comment: "Needs review.",
+        needs_human_review: true,
+      },
+    );
+
+    assert.deepEqual(result, {
+      title_updated: false,
+      body_updated: false,
+      labels_applied: [],
+      comment_posted: false,
+      needs_human_review: true,
+      summary: "Skipped triage update because human review is required.",
+    });
   });
 });
 
