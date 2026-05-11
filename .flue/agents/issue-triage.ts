@@ -366,7 +366,7 @@ async function readJsonCommand(
   session: FlueSession,
   command: string,
   description: string,
-  commandDef: typeof gh = gh,
+  commandDef: typeof gh = readOnlyGh,
 ) {
   const result = await session.shell(command, {
     commands: [commandDef],
@@ -536,7 +536,6 @@ async function readIssueClosureContext(
     session,
     `gh issue view ${issueNumber}${repoArg(repository)} --json number,title,state,stateReason,url`,
     `Fetching canonical duplicate #${issueNumber}`,
-    readOnlyGh,
   );
 }
 
@@ -725,13 +724,11 @@ async function readIssueContext(
     session,
     `gh issue view ${issueNumber}${repo} --json title,body,author,labels,comments,url,state,createdAt,updatedAt`,
     "Fetching issue context",
-    readOnlyGh,
   );
   const labels = await readJsonCommand(
     session,
     `gh label list${repo} --limit 200 --json name,description`,
     "Fetching repository labels",
-    readOnlyGh,
   );
   const context: IssueContext = {
     issueNumber,
