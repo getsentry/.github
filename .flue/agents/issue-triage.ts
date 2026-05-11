@@ -385,8 +385,22 @@ export function hasDuplicateOfFlag(helpText: string) {
   return helpText.includes("--duplicate-of");
 }
 
+export function hasCloseReason(helpText: string, reason: string) {
+  const match = helpText.match(/Reason for closing:\s*\{([^}]*)\}/);
+
+  return match
+    ? match[1].split("|").some((supportedReason) => {
+        return supportedReason.trim() === reason;
+      })
+    : false;
+}
+
 export function hasDuplicateReason(helpText: string) {
-  return /Reason for closing: \{[^}]*\bduplicate\b[^}]*\}/.test(helpText);
+  return hasCloseReason(helpText, "duplicate");
+}
+
+export function hasNotPlannedReason(helpText: string) {
+  return hasCloseReason(helpText, "not planned");
 }
 
 export function buildDuplicateCloseArgs(duplicateNumber: number, helpText: string) {
@@ -399,6 +413,14 @@ export function buildDuplicateCloseArgs(duplicateNumber: number, helpText: strin
   }
 
   throw new Error("Installed gh CLI cannot close issues as duplicates.");
+}
+
+export function buildNotPlannedCloseArgs(helpText: string) {
+  if (hasNotPlannedReason(helpText)) {
+    return ` --reason ${shellQuote("not planned")}`;
+  }
+
+  throw new Error("Installed gh CLI cannot close issues as not planned.");
 }
 
 let issueCloseHelpText: string | undefined;
@@ -584,9 +606,12 @@ async function closeDuplicate(
 
   try {
     if (closeAsNotPlanned) {
+      const closeArgs = buildNotPlannedCloseArgs(
+        await getIssueCloseHelpText(session),
+      );
       await runGhCommand(
         session,
-        `gh issue close ${context.issueNumber}${repoArg(context.repository)} --reason ${shellQuote("not planned")}`,
+        `gh issue close ${context.issueNumber}${repoArg(context.repository)}${closeArgs}`,
         "Closing issue as not planned",
       );
     } else {

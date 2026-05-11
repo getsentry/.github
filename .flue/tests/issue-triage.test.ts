@@ -7,8 +7,11 @@ import type { FlueSession } from "@flue/sdk/client";
 import {
   buildDuplicateClosureComment,
   buildDuplicateCloseArgs,
+  buildNotPlannedCloseArgs,
+  hasCloseReason,
   hasDuplicateReason,
   hasDuplicateOfFlag,
+  hasNotPlannedReason,
   hasIssueTriageBotIntro,
   issueRepositoryFromIssue,
   issueRepositoryFromUrl,
@@ -123,6 +126,15 @@ describe("duplicate closure", () => {
     assert.equal(hasDuplicateReason("      --reason string      Reason"), false);
   });
 
+  it("detects supported close reasons from gh help text", () => {
+    const helpText =
+      "      --reason string   Reason for closing: {completed|not planned}";
+
+    assert.equal(hasCloseReason(helpText, "completed"), true);
+    assert.equal(hasNotPlannedReason(helpText), true);
+    assert.equal(hasCloseReason(helpText, "duplicate"), false);
+  });
+
   it("prefers linked duplicate closure when gh supports it", () => {
     assert.equal(
       buildDuplicateCloseArgs(
@@ -140,6 +152,19 @@ describe("duplicate closure", () => {
         "      --reason string   Reason for closing: {completed|not planned|duplicate}",
       ),
       " --reason duplicate",
+    );
+  });
+
+  it("builds not planned close args only when supported", () => {
+    assert.equal(
+      buildNotPlannedCloseArgs(
+        "      --reason string   Reason for closing: {completed|not planned}",
+      ),
+      " --reason 'not planned'",
+    );
+    assert.throws(
+      () => buildNotPlannedCloseArgs("      --reason string      Reason"),
+      /cannot close issues as not planned/,
     );
   });
 

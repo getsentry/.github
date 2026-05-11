@@ -68,7 +68,7 @@ jobs:
         run: |
           owner="${TARGET_REPOSITORY%%/*}"
           name="${TARGET_REPOSITORY#*/}"
-          if [ -z "$owner" ] || [ -z "$name" ] || [ "$owner" = "$name" ]; then
+          if [[ "$TARGET_REPOSITORY" != */* ]] || [ -z "$owner" ] || [ -z "$name" ]; then
             echo "Invalid repository: $TARGET_REPOSITORY" >&2
             exit 2
           fi
