@@ -18,6 +18,7 @@ import {
   issueRepositoryFromIssue,
   issueRepositoryFromUrl,
   prepareRepository,
+  summarizeAgentFailure,
   validateDuplicateForAutomaticClosure,
   wasClosedAsNotPlanned,
   withIssueTriageBotIntro,
@@ -84,6 +85,19 @@ describe("issue triage comments", () => {
 });
 
 describe("duplicate closure", () => {
+  it("keeps gh close capability errors out of the model-failure bucket", () => {
+    assert.equal(
+      summarizeAgentFailure(
+        new Error("Installed gh CLI cannot close issues as duplicates."),
+      ),
+      "Installed gh CLI cannot close issues as duplicates.",
+    );
+    assert.equal(
+      summarizeAgentFailure(new Error("unknown flag: --duplicate-of")),
+      "The installed gh CLI does not support the issue close options this workflow needs.",
+    );
+  });
+
   it("inherits not planned when the canonical issue was closed as wontfix", () => {
     assert.equal(
       wasClosedAsNotPlanned({
@@ -245,6 +259,77 @@ describe("duplicate closure", () => {
 });
 
 describe("triage updates", () => {
+  it("returns a structured result when label application fails", async () => {
+    const session = {
+      shell: async () => ({
+        exitCode: 1,
+        stderr: "network error",
+        stdout: "",
+      }),
+    } as unknown as FlueSession;
+    const result = await applyTriageUpdate(
+      session,
+      {
+        issueNumber: 100,
+        repository: "getsentry/sentry-mcp",
+        issue: { state: "OPEN", title: "Title", body: "Body" },
+        labels: [{ name: "bug" }],
+        fetchedAt: "2026-05-11T00:00:00.000Z",
+      },
+      {
+        severity: "medium",
+        category: "bug",
+        disposition: "actionable",
+        validity: "likely",
+        summary: "Looks actionable.",
+        evidence: [],
+        labels_to_apply: ["bug"],
+        should_comment: false,
+        needs_human_review: false,
+      },
+    );
+
+    assert.equal(result.needs_human_review, true);
+    assert.equal(result.comment_posted, false);
+    assert.match(result.summary, /Applying issue labels failed/);
+  });
+
+  it("returns a structured result when comment posting fails", async () => {
+    const session = {
+      shell: async () => ({
+        exitCode: 1,
+        stderr: "network error",
+        stdout: "",
+      }),
+    } as unknown as FlueSession;
+    const result = await applyTriageUpdate(
+      session,
+      {
+        issueNumber: 100,
+        repository: "getsentry/sentry-mcp",
+        issue: { state: "OPEN", title: "Title", body: "Body" },
+        labels: [],
+        fetchedAt: "2026-05-11T00:00:00.000Z",
+      },
+      {
+        severity: "medium",
+        category: "bug",
+        disposition: "actionable",
+        validity: "likely",
+        summary: "Looks actionable.",
+        evidence: [],
+        labels_to_apply: [],
+        should_comment: true,
+        triage_comment: "Needs maintainer review.",
+        needs_human_review: false,
+      },
+    );
+
+    assert.equal(result.needs_human_review, true);
+    assert.equal(result.comment_posted, false);
+    assert.match(result.summary, /Posting issue comment failed/);
+  });
+
   it("does not mutate issues when human review is required", async () => {
     const session = {
       shell: async () => {

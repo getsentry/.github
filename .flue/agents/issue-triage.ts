@@ -81,8 +81,21 @@ type TriageUpdateResult = {
   summary: string;
 };
 
-function summarizeAgentFailure(error: unknown) {
+export function summarizeAgentFailure(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
+
+  if (message.includes("Installed gh CLI cannot close issues")) {
+    return message;
+  }
+
+  if (
+    (message.includes("--duplicate-of") || message.includes("--reason")) &&
+    (message.includes("unknown flag") ||
+      message.includes("invalid argument") ||
+      message.includes("invalid value"))
+  ) {
+    return "The installed gh CLI does not support the issue close options this workflow needs.";
+  }
 
   if (message.includes("404 status code")) {
     return "The triage model returned a provider error before producing structured output.";
@@ -92,7 +105,7 @@ function summarizeAgentFailure(error: unknown) {
     return "The triage model timed out before producing structured output.";
   }
 
-  return "The triage agent failed before producing structured output.";
+  return "The triage workflow failed before producing structured output.";
 }
 
 function buildDuplicateSearchFailure(error: unknown): DuplicateSearch {
@@ -670,16 +683,31 @@ export async function applyTriageUpdate(
     };
   }
 
-  const labelsApplied = await applyLabels(
-    session,
-    context,
-    diagnosis.labels_to_apply,
-  );
+  const failureSummaries: string[] = [];
+  let labelsApplied: string[] = [];
   let commentPosted = false;
+
+  try {
+    labelsApplied = await applyLabels(
+      session,
+      context,
+      diagnosis.labels_to_apply,
+    );
+  } catch (error) {
+    const summary = `Applying issue labels failed: ${summarizeAgentFailure(error)}`;
+    failureSummaries.push(summary);
+    console.warn(`[issue-triage] ${summary}`);
+  }
 
   const comment = selectTriageComment(diagnosis);
   if (comment) {
-    commentPosted = await postComment(session, context, comment);
+    try {
+      commentPosted = await postComment(session, context, comment);
+    } catch (error) {
+      const summary = `Posting issue comment failed: ${summarizeAgentFailure(error)}`;
+      failureSummaries.push(summary);
+      console.warn(`[issue-triage] ${summary}`);
+    }
   }
 
   const changed = [
@@ -690,11 +718,14 @@ export async function applyTriageUpdate(
   return {
     labels_applied: labelsApplied,
     comment_posted: commentPosted,
-    needs_human_review: diagnosis.needs_human_review,
+    needs_human_review:
+      diagnosis.needs_human_review || failureSummaries.length > 0,
     summary:
-      changed.length > 0
-        ? `Updated issue ${changed.join(", ")}.`
-        : "No issue update was needed.",
+      failureSummaries.length > 0
+        ? `Issue update needs maintainer review: ${failureSummaries.join("; ")}`
+        : changed.length > 0
+          ? `Updated issue ${changed.join(", ")}.`
+          : "No issue update was needed.",
   };
 }
 
