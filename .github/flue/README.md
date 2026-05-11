@@ -61,7 +61,7 @@ git diff --check -- .
 ```
 
 The real smoke test is a manual workflow run against a disposable issue. This is
-not a dry run: it can comment, edit, label, or close the issue.
+not a dry run: it can comment, label, or close the issue.
 
 ```bash
 gh workflow run issue-triage.yml \

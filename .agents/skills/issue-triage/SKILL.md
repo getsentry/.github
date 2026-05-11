@@ -67,8 +67,9 @@ If `repositoryContext.checkoutAvailable` is true, inspect code under `repository
 
 - Read `AGENTS.md`, relevant docs, and neighboring files before making claims about expected behavior.
 - Identify the likely subsystem, files, commands, docs, or API surface. For stack traces, inspect first-party frames. For docs/setup reports, inspect the referenced docs and scripts.
-- Validate with focused searches first. Run targeted tests, typechecks, or package scripts only when directly relevant and reasonably scoped. Do not run broad or destructive commands unless trusted repo docs make them the standard path.
-- If dependencies are missing or validation is too expensive, say so in `evidence` and mark validity conservatively.
+- Validate with focused searches first. Inspect relevant checked-in files when
+  available, but do not run repository commands or package scripts.
+- If validation is too expensive, say so in `evidence` and mark validity conservatively.
 - Cite related issues only when the connection is concrete. Use `#123` for same-repo issues.
 - Only return labels that already exist in `context.labels`.
 
@@ -80,23 +81,9 @@ Disposition values:
 - `impractical_scope`: too broad for normal triage without a proposal, owner, migration plan, or product decision.
 - `unclear`: the concern cannot be identified.
 
-Rewrite modes:
-
-- `none`: leave the issue body alone, especially when rewriting would launder a weak report into a better-looking ticket than it is.
-- `light_cleanup`: keep the reporter's request, remove noise, and make it easier to scan.
-- `technical_diagnosis`: use only for concrete bugs, docs, setup failures, or API behavior where repository evidence matters.
-- `scope_clarification`: use for broad feature or maintenance requests when a small rewrite helps show what is missing.
-
-Issue edit rules:
-
-- Set `should_update_issue` only when the title/body is misleading, underspecified, hard to scan, or missing analysis that would help maintainers act.
-- Do not rewrite just to add ceremony. Preserve low signal where maintainers need to see it.
-- Propose a clearer title only if the current title is generic or misleading.
-- Proposed bodies must keep relevant repro details, errors, links, and reporter-supplied facts.
-- Issue bodies must not include a greeting, bot voice, apology, "I checked", or automation note.
-- Prefer short sections and bullets. Use headings only when they help.
-- Include validation only for concrete bug/docs/setup/API claims.
-- Use `should_comment` for a short ask for missing context, a scope note, or a concise explanation that the request is not actionable as written.
+- Do not rewrite issue titles or bodies. Use `should_comment` for a short ask
+  for missing context, a scope note, or a concise explanation that the request
+  is not actionable as written.
 
 Broad rewrites, architecture migrations, and "X would be better" requests need extra restraint. Do not inventory the whole repository unless it changes the decision, do not add findings that merely prove the repo uses its current stack, and keep broad/impractical feature requests open for human review unless duplicate status is confirmed.
 
@@ -105,15 +92,10 @@ Return:
 - `severity`: `low`, `medium`, `high`, or `critical`
 - `category`: `bug`, `documentation`, `feature_request`, `support`, `security`, `maintenance`, or `unknown`
 - `disposition`: `actionable`, `needs_more_info`, `low_actionability`, `impractical_scope`, or `unclear`
-- `rewrite_mode`: `none`, `light_cleanup`, `technical_diagnosis`, or `scope_clarification`
 - `validity`: `confirmed`, `likely`, `not_reproducible`, or `unclear`
 - `summary`: concise diagnosis
 - `evidence`: concrete observations and validation attempts
 - `labels_to_apply`: existing labels only
 - `should_comment`
-- `should_update_issue`
-- `proposed_title` when a clearer title is needed
-- `proposed_body` when `should_update_issue` is true
 - `triage_comment` when `should_comment` is true
-- `update_comment` when `should_update_issue` is true
 - `needs_human_review`: true for security-sensitive, high-risk, ambiguous, or destructive cases

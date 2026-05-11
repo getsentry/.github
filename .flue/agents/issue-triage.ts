@@ -34,12 +34,6 @@ const dispositionSchema = v.picklist([
   "impractical_scope",
   "unclear",
 ]);
-const rewriteModeSchema = v.picklist([
-  "none",
-  "light_cleanup",
-  "technical_diagnosis",
-  "scope_clarification",
-]);
 
 const duplicateCandidateSchema = v.object({
   number: v.pipe(v.number(), v.integer(), v.minValue(1)),
@@ -70,29 +64,22 @@ const diagnosisSchema = v.object({
   severity: severitySchema,
   category: categorySchema,
   disposition: dispositionSchema,
-  rewrite_mode: rewriteModeSchema,
   validity: v.picklist(["confirmed", "likely", "not_reproducible", "unclear"]),
   summary: v.string(),
   evidence: v.array(v.string()),
   labels_to_apply: v.array(v.string()),
   should_comment: v.boolean(),
-  should_update_issue: v.boolean(),
-  proposed_title: v.optional(v.string()),
-  proposed_body: v.optional(v.string()),
   triage_comment: v.optional(v.string()),
-  update_comment: v.optional(v.string()),
   needs_human_review: v.boolean(),
 });
 type Diagnosis = v.InferOutput<typeof diagnosisSchema>;
 
-const updateSchema = v.object({
-  title_updated: v.boolean(),
-  body_updated: v.boolean(),
-  labels_applied: v.array(v.string()),
-  comment_posted: v.boolean(),
-  needs_human_review: v.boolean(),
-  summary: v.string(),
-});
+type TriageUpdateResult = {
+  labels_applied: string[];
+  comment_posted: boolean;
+  needs_human_review: boolean;
+  summary: string;
+};
 
 function summarizeAgentFailure(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
@@ -121,14 +108,12 @@ function buildDiagnosisFailure(error: unknown): Diagnosis {
     severity: "low",
     category: "unknown",
     disposition: "unclear",
-    rewrite_mode: "none",
     validity: "unclear",
     summary:
       "Automated triage could not complete, so the issue is left unchanged for maintainer review.",
     evidence: [summarizeAgentFailure(error)],
     labels_to_apply: [],
     should_comment: false,
-    should_update_issue: false,
     needs_human_review: true,
   };
 }
@@ -143,8 +128,6 @@ const readOnlyGh = defineCommand("gh", {
     ? { GH_TOKEN: process.env.FLUE_READ_GH_TOKEN }
     : {},
 });
-const git = defineCommand("git");
-const pnpm = defineCommand("pnpm");
 
 // pi-ai currently replays OpenAI Responses reasoning IDs with store=false.
 // Inline encrypted reasoning until Flue/pi-ai expose this cleanly.
@@ -209,20 +192,6 @@ function getIssueState(context: IssueContext) {
     return null;
   }
   return context.issue.state.toLowerCase();
-}
-
-function getIssueTitle(context: IssueContext) {
-  if (!isRecord(context.issue) || typeof context.issue.title !== "string") {
-    return "";
-  }
-  return context.issue.title;
-}
-
-function getIssueBody(context: IssueContext) {
-  if (!isRecord(context.issue) || typeof context.issue.body !== "string") {
-    return "";
-  }
-  return context.issue.body;
 }
 
 function existingLabels(context: IssueContext) {
@@ -534,44 +503,6 @@ async function applyLabels(
   return applied;
 }
 
-async function editIssueTitle(
-  session: FlueSession,
-  context: IssueContext,
-  title?: string,
-) {
-  const nextTitle = title?.trim();
-  if (!nextTitle || nextTitle === getIssueTitle(context).trim()) {
-    return false;
-  }
-
-  await runGhCommand(
-    session,
-    `gh issue edit ${context.issueNumber}${repoArg(context.repository)} --title ${shellQuote(nextTitle)}`,
-    "Updating issue title",
-  );
-  return true;
-}
-
-async function editIssueBody(
-  session: FlueSession,
-  context: IssueContext,
-  body?: string,
-) {
-  const nextBody = body?.trim();
-  if (!nextBody || nextBody === getIssueBody(context).trim()) {
-    return false;
-  }
-
-  await withGhBodyFile(`issue-${context.issueNumber}-body`, nextBody, (path) =>
-    runGhCommand(
-      session,
-      `gh issue edit ${context.issueNumber}${repoArg(context.repository)} --body-file ${shellQuote(path)}`,
-      "Updating issue body",
-    ),
-  );
-  return true;
-}
-
 async function postComment(
   session: FlueSession,
   context: IssueContext,
@@ -701,78 +632,26 @@ async function closeDuplicate(
   };
 }
 
-function buildIssueUpdateComment(
-  diagnosis: v.InferOutput<typeof diagnosisSchema>,
-) {
-  const evidence = diagnosis.evidence
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .slice(0, 3);
-  const lines = [TRIAGE_BOT_INTRO, ""];
-
-  switch (diagnosis.rewrite_mode) {
-    case "light_cleanup":
-      lines.push(
-        "I gave the report a quick cleanup so the concrete ask is easier to scan without changing it.",
-      );
-      break;
-    case "scope_clarification":
-      lines.push(
-        "I trimmed this to the actual ask and what maintainers still need.",
-      );
-      break;
-    case "technical_diagnosis":
-      lines.push("I added the repo context that looks relevant for this one.");
-      break;
-    case "none":
-      lines.push("I added a quick triage note for maintainer review.");
-      break;
-  }
-
-  if (diagnosis.summary.trim()) {
-    lines.push("", `Quick triage read: ${diagnosis.summary.trim()}`);
-  }
-
-  if (diagnosis.rewrite_mode === "technical_diagnosis" && evidence.length > 0) {
-    lines.push("", "What I checked:");
-    for (const item of evidence) {
-      lines.push(`- ${item}`);
-    }
-  }
-
-  lines.push("", "A maintainer will take it from here.");
-
-  return lines.join("\n");
-}
-
 function selectTriageComment(
   diagnosis: v.InferOutput<typeof diagnosisSchema>,
-  bodyUpdated: boolean,
 ) {
-  if (bodyUpdated) {
-    return (
-      diagnosis.update_comment?.trim() ||
-      diagnosis.triage_comment?.trim() ||
-      buildIssueUpdateComment(diagnosis)
-    );
-  }
-
   if (!diagnosis.should_comment) {
     return undefined;
   }
 
-  return diagnosis.triage_comment?.trim();
+  return (
+    diagnosis.triage_comment?.trim() ||
+    `Quick triage read: ${diagnosis.summary.trim() || "This needs maintainer review."}`
+  );
 }
 
 export async function applyTriageUpdate(
   session: FlueSession,
   context: IssueContext,
   diagnosis: v.InferOutput<typeof diagnosisSchema>,
-): Promise<v.InferOutput<typeof updateSchema>> {
+): Promise<TriageUpdateResult> {
   if (getIssueState(context) === "closed") {
     return {
-      title_updated: false,
-      body_updated: false,
       labels_applied: [],
       comment_posted: false,
       needs_human_review: true,
@@ -782,8 +661,6 @@ export async function applyTriageUpdate(
 
   if (diagnosis.needs_human_review) {
     return {
-      title_updated: false,
-      body_updated: false,
       labels_applied: [],
       comment_posted: false,
       needs_human_review: true,
@@ -796,43 +673,19 @@ export async function applyTriageUpdate(
     context,
     diagnosis.labels_to_apply,
   );
-  let titleUpdated = false;
-  let bodyUpdated = false;
   let commentPosted = false;
 
-  if (diagnosis.should_update_issue) {
-    titleUpdated = await editIssueTitle(
-      session,
-      context,
-      diagnosis.proposed_title,
-    );
-    bodyUpdated = await editIssueBody(
-      session,
-      context,
-      diagnosis.proposed_body,
-    );
-
-    const comment = selectTriageComment(diagnosis, bodyUpdated);
-    if (comment) {
-      commentPosted = await postComment(session, context, comment);
-    }
-  } else {
-    const comment = selectTriageComment(diagnosis, false);
-    if (comment) {
-      commentPosted = await postComment(session, context, comment);
-    }
+  const comment = selectTriageComment(diagnosis);
+  if (comment) {
+    commentPosted = await postComment(session, context, comment);
   }
 
   const changed = [
-    titleUpdated ? "title" : null,
-    bodyUpdated ? "body" : null,
     labelsApplied.length > 0 ? "labels" : null,
     commentPosted ? "comment" : null,
   ].filter(Boolean);
 
   return {
-    title_updated: titleUpdated,
-    body_updated: bodyUpdated,
     labels_applied: labelsApplied,
     comment_posted: commentPosted,
     needs_human_review: diagnosis.needs_human_review,
@@ -881,14 +734,12 @@ async function isDirectory(path: string) {
   }
 }
 
-export async function prepareRepository(session: FlueSession) {
+export async function prepareRepository() {
   const repoPath = process.env.FLUE_TARGET_REPO_PATH;
   if (!repoPath) {
     return {
       checkoutAvailable: false,
       repoPath: null,
-      remoteUrl: null,
-      headSha: null,
       checkoutNote: "No target repository checkout path was provided.",
     };
   }
@@ -897,38 +748,13 @@ export async function prepareRepository(session: FlueSession) {
     return {
       checkoutAvailable: false,
       repoPath: null,
-      remoteUrl: null,
-      headSha: null,
       checkoutNote: `Target repository path is not available: ${repoPath}`,
-    };
-  }
-
-  const remote = await session.shell("git remote get-url origin", {
-    commands: [git],
-    cwd: repoPath,
-    timeout: 30_000,
-  });
-  const head = await session.shell("git rev-parse HEAD", {
-    commands: [git],
-    cwd: repoPath,
-    timeout: 30_000,
-  });
-
-  if (head.exitCode !== 0) {
-    return {
-      checkoutAvailable: false,
-      repoPath: null,
-      remoteUrl: null,
-      headSha: null,
-      checkoutNote: `Target repository checkout is not a git checkout: ${head.stderr || head.stdout}`,
     };
   }
 
   return {
     checkoutAvailable: true,
     repoPath,
-    remoteUrl: remote.exitCode === 0 ? remote.stdout.trim() : null,
-    headSha: head.exitCode === 0 ? head.stdout.trim() : null,
     checkoutNote:
       "Using the target repository checkout prepared by GitHub Actions.",
   };
@@ -946,7 +772,6 @@ export default async function ({ init, payload }: FlueContext) {
   });
   const session = await agent.session();
   enableEncryptedReasoning(session);
-  const commands = [readOnlyGh, git, pnpm];
 
   const initialContext = await readIssueContext(
     session,
@@ -1065,7 +890,7 @@ export default async function ({ init, payload }: FlueContext) {
     };
   }
 
-  const repositoryContext = await prepareRepository(session);
+  const repositoryContext = await prepareRepository();
 
   const diagnosisContext = await readIssueContext(
     session,
@@ -1083,7 +908,7 @@ export default async function ({ init, payload }: FlueContext) {
         repositoryContext,
         duplicateSearch,
       },
-      commands,
+      commands: [readOnlyGh],
       result: diagnosisSchema,
       timeout: 900_000,
     });
@@ -1115,12 +940,9 @@ export default async function ({ init, payload }: FlueContext) {
     severity: diagnosis.severity,
     category: diagnosis.category,
     disposition: diagnosis.disposition,
-    rewrite_mode: diagnosis.rewrite_mode,
     validity: diagnosis.validity,
     labels_applied: update.labels_applied,
     comment_posted: update.comment_posted,
-    title_updated: update.title_updated,
-    body_updated: update.body_updated,
     needs_human_review: update.needs_human_review,
     summary: update.summary,
   };

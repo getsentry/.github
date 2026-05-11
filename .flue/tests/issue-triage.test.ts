@@ -264,24 +264,17 @@ describe("triage updates", () => {
         severity: "high",
         category: "security",
         disposition: "unclear",
-        rewrite_mode: "technical_diagnosis",
         validity: "unclear",
         summary: "Needs maintainer review.",
         evidence: [],
         labels_to_apply: ["bug"],
         should_comment: true,
-        should_update_issue: true,
-        proposed_title: "New title",
-        proposed_body: "New body",
         triage_comment: "Needs review.",
-        update_comment: "Needs review.",
         needs_human_review: true,
       },
     );
 
     assert.deepEqual(result, {
-      title_updated: false,
-      body_updated: false,
       labels_applied: [],
       comment_posted: false,
       needs_human_review: true,
@@ -296,13 +289,8 @@ describe("repository preparation", () => {
       tmpdir(),
       `missing-flue-checkout-${Date.now()}`,
     );
-    const session = {
-      shell: async () => {
-        throw new Error("shell should not run for a missing checkout path");
-      },
-    } as unknown as FlueSession;
 
-    const result = await prepareRepository(session);
+    const result = await prepareRepository();
 
     assert.equal(result.checkoutAvailable, false);
     assert.equal(result.repoPath, null);
