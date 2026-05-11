@@ -136,10 +136,12 @@ const gh = defineCommand("gh", {
     GH_TOKEN: process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN,
   },
 });
+const readGhToken = process.env.FLUE_READ_GH_TOKEN ?? "";
 const readOnlyGh = defineCommand("gh", {
-  env: process.env.FLUE_READ_GH_TOKEN
-    ? { GH_TOKEN: process.env.FLUE_READ_GH_TOKEN }
-    : {},
+  env: {
+    GH_TOKEN: readGhToken,
+    GITHUB_TOKEN: readGhToken,
+  },
 });
 
 // pi-ai currently replays OpenAI Responses reasoning IDs with store=false.
@@ -581,16 +583,6 @@ async function closeDuplicate(
   const duplicateLabel = findDuplicateLabel(context);
   let failureSummary: string | undefined;
   let labelsApplied: string[] = [];
-
-  if (duplicateLabel) {
-    try {
-      labelsApplied = await applyLabels(session, context, [duplicateLabel]);
-    } catch (error) {
-      failureSummary = `Applying duplicate label failed: ${summarizeAgentFailure(error)}`;
-      console.warn(`[issue-triage] ${failureSummary}`);
-    }
-  }
-
   const closeAsNotPlanned = wasClosedAsNotPlanned(canonicalIssue);
   const comment = buildDuplicateClosureComment(duplicate, closeAsNotPlanned);
   let commentPosted = false;
@@ -628,6 +620,15 @@ async function closeDuplicate(
       closeAsNotPlanned,
       failureSummary,
     };
+  }
+
+  if (duplicateLabel) {
+    try {
+      labelsApplied = await applyLabels(session, context, [duplicateLabel]);
+    } catch (error) {
+      failureSummary = `Applying duplicate label failed: ${summarizeAgentFailure(error)}`;
+      console.warn(`[issue-triage] ${failureSummary}`);
+    }
   }
 
   try {
