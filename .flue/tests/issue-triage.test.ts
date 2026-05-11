@@ -108,6 +108,14 @@ describe("duplicate closure", () => {
     );
   });
 
+  it("describes duplicate closure after it has succeeded", () => {
+    assert.match(buildDuplicateClosureComment(duplicate, false), /I've kept/);
+    assert.doesNotMatch(
+      buildDuplicateClosureComment(duplicate, false),
+      /I'm keeping/,
+    );
+  });
+
   it("detects whether gh can link duplicate closures", () => {
     assert.equal(
       hasDuplicateOfFlag("      --duplicate-of int   Issue number"),

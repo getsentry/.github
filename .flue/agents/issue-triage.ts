@@ -562,14 +562,14 @@ export function buildDuplicateClosureComment(
     return [
       `Quick triage read: this matches #${duplicate.number}, which was already closed as not planned.`,
       "",
-      "I'm closing this with the same resolution so we don't keep two copies of the same ask open.",
+      "I've closed this with the same resolution so we don't keep two copies of the same ask open.",
     ].join("\n");
   }
 
   return [
     `Quick triage read: this looks like the same request as #${duplicate.number}.`,
     "",
-    `I'm keeping the thread tidy by closing this one so updates stay on #${duplicate.number}.`,
+    `I've kept the thread tidy by closing this one so updates stay on #${duplicate.number}.`,
   ].join("\n");
 }
 
@@ -597,14 +597,6 @@ async function closeDuplicate(
   let commentPosted = false;
 
   try {
-    commentPosted = await postComment(session, context, comment);
-  } catch (error) {
-    const summary = `Posting duplicate closure comment failed: ${summarizeAgentFailure(error)}`;
-    failureSummary = failureSummary ? `${failureSummary}; ${summary}` : summary;
-    console.warn(`[issue-triage] ${summary}`);
-  }
-
-  try {
     if (closeAsNotPlanned) {
       const closeArgs = buildNotPlannedCloseArgs(
         await getIssueCloseHelpText(session),
@@ -625,16 +617,24 @@ async function closeDuplicate(
         "Closing duplicate issue",
       );
     }
+  } catch (error) {
+    const summary = `Closing duplicate issue failed: ${summarizeAgentFailure(error)}`;
+    failureSummary = failureSummary ? `${failureSummary}; ${summary}` : summary;
+    console.warn(`[issue-triage] ${summary}`);
 
     return {
       labelsApplied,
       commentPosted,
-      closed: true,
+      closed: false,
       closeAsNotPlanned,
       failureSummary,
     };
+  }
+
+  try {
+    commentPosted = await postComment(session, context, comment);
   } catch (error) {
-    const summary = `Closing duplicate issue failed: ${summarizeAgentFailure(error)}`;
+    const summary = `Posting duplicate closure comment failed: ${summarizeAgentFailure(error)}`;
     failureSummary = failureSummary ? `${failureSummary}; ${summary}` : summary;
     console.warn(`[issue-triage] ${summary}`);
   }
@@ -642,7 +642,7 @@ async function closeDuplicate(
   return {
     labelsApplied,
     commentPosted,
-    closed: false,
+    closed: true,
     closeAsNotPlanned,
     failureSummary,
   };
