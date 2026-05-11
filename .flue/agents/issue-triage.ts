@@ -366,9 +366,10 @@ async function readJsonCommand(
   session: FlueSession,
   command: string,
   description: string,
+  commandDef: typeof gh = gh,
 ) {
   const result = await session.shell(command, {
-    commands: [gh],
+    commands: [commandDef],
     timeout: 60_000,
   });
 
@@ -535,6 +536,7 @@ async function readIssueClosureContext(
     session,
     `gh issue view ${issueNumber}${repoArg(repository)} --json number,title,state,stateReason,url`,
     `Fetching canonical duplicate #${issueNumber}`,
+    readOnlyGh,
   );
 }
 
@@ -706,11 +708,13 @@ async function readIssueContext(
     session,
     `gh issue view ${issueNumber}${repo} --json title,body,author,labels,comments,url,state,createdAt,updatedAt`,
     "Fetching issue context",
+    readOnlyGh,
   );
   const labels = await readJsonCommand(
     session,
     `gh label list${repo} --limit 200 --json name,description`,
     "Fetching repository labels",
+    readOnlyGh,
   );
   const context: IssueContext = {
     issueNumber,
@@ -846,9 +850,21 @@ export default async function ({ init, payload }: FlueContext) {
         currentRepository,
       );
     } catch (error) {
-      console.warn(
-        `[issue-triage] Canonical duplicate lookup failed: ${summarizeAgentFailure(error)}`,
-      );
+      const failureSummary = `Canonical duplicate lookup failed: ${summarizeAgentFailure(error)}`;
+      console.warn(`[issue-triage] ${failureSummary}`);
+      return {
+        outcome: "needs_human_review",
+        steps: [
+          { name: "search-duplicates", result: duplicateSearch.status },
+          { name: "validate-duplicate", result: "same-repo high-confidence" },
+          { name: "fetch-canonical-duplicate", result: failureSummary },
+        ],
+        duplicate: duplicateSearch.duplicate,
+        labels_applied: [],
+        comment_posted: false,
+        needs_human_review: true,
+        summary: `Found duplicate #${duplicateSearch.duplicate.number}, but automatic closure needs maintainer review because the canonical issue could not be fetched.`,
+      };
     }
     const closure = await closeDuplicate(
       session,
