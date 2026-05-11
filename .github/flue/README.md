@@ -47,8 +47,8 @@ Required organization configuration:
 - `FLUE_PRIVATE_KEY` secret for the Sentry Intern GitHub App.
 - `FLUE_OPENAI_API_KEY` secret for the model provider.
 
-Sentry Intern needs `Issues: read and write` repository permission. Source
-checkout uses the caller workflow's `GITHUB_TOKEN` with `contents: read`.
+Sentry Intern needs `Contents: read` and `Issues: read and write` repository
+permissions. Source checkout uses the app's read token.
 
 ## Testing
 

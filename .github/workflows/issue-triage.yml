@@ -127,6 +127,7 @@ jobs:
           private-key: ${{ secrets.FLUE_PRIVATE_KEY }}
           owner: getsentry
           repositories: ${{ steps.target.outputs.name }}
+          permission-contents: read
           permission-issues: read
 
       - name: Create issue triage write token
@@ -148,7 +149,7 @@ jobs:
           path: target-repo
           fetch-depth: 1
           persist-credentials: false
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.issue-triage-read-token.outputs.token }}
 
       - name: Checkout target repository at ref
         if: ${{ steps.target.outputs['target-ref'] != '' }}
@@ -160,7 +161,7 @@ jobs:
           path: target-repo
           fetch-depth: 1
           persist-credentials: false
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.issue-triage-read-token.outputs.token }}
 
       - name: Install pnpm
         uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
