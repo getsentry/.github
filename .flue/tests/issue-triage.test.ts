@@ -3,9 +3,9 @@ import { tmpdir } from "node:os";
 import { mkdtemp, rm } from "node:fs/promises";
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
-import type { FlueSession } from "@flue/sdk/client";
+import type { FlueContext, FlueSession } from "@flue/sdk/client";
 
-import {
+import issueTriageAgent, {
   applyTriageUpdate,
   buildDuplicateClosureComment,
   buildDuplicateCloseArgs,
@@ -366,6 +366,27 @@ describe("triage updates", () => {
       needs_human_review: true,
       summary: "Skipped triage update because human review is required.",
     });
+  });
+});
+
+describe("agent failure handling", () => {
+  it("returns human review when issue context cannot be fetched", async () => {
+    const session = {
+      shell: async () => ({
+        exitCode: 1,
+        stderr: "network error",
+        stdout: "",
+      }),
+    } as unknown as FlueSession;
+
+    const result = await issueTriageAgent({
+      payload: { issueNumber: 100, repository: "getsentry/sentry-mcp" },
+      init: async () => ({ session: async () => session }),
+    } as unknown as FlueContext);
+
+    assert.equal(result.outcome, "needs_human_review");
+    assert.equal(result.needs_human_review, true);
+    assert.match(result.summary, /Automated triage failed/);
   });
 });
 

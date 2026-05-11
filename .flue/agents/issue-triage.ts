@@ -83,11 +83,9 @@ type TriageUpdateResult = {
 
 export function summarizeAgentFailure(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
-
   if (message.includes("Installed gh CLI cannot close issues")) {
     return message;
   }
-
   if (
     (message.includes("--duplicate-of") || message.includes("--reason")) &&
     (message.includes("unknown flag") ||
@@ -96,15 +94,12 @@ export function summarizeAgentFailure(error: unknown) {
   ) {
     return "The installed gh CLI does not support the issue close options this workflow needs.";
   }
-
   if (message.includes("404 status code")) {
     return "The triage model returned a provider error before producing structured output.";
   }
-
   if (message.includes("Gateway Timeout")) {
     return "The triage model timed out before producing structured output.";
   }
-
   return "The triage workflow failed before producing structured output.";
 }
 
@@ -210,7 +205,6 @@ function existingLabels(context: IssueContext) {
   if (!Array.isArray(context.labels)) {
     return new Map<string, string>();
   }
-
   const labels = new Map<string, string>();
   for (const label of context.labels) {
     if (isRecord(label) && typeof label.name === "string") {
@@ -223,14 +217,12 @@ function existingLabels(context: IssueContext) {
 function filterExistingLabels(context: IssueContext, labels: string[]) {
   const available = existingLabels(context);
   const result = new Map<string, string>();
-
   for (const label of labels) {
     const existing = available.get(label.toLowerCase());
     if (existing) {
       result.set(existing.toLowerCase(), existing);
     }
   }
-
   return Array.from(result.values());
 }
 
@@ -248,11 +240,9 @@ function getFirstParagraph(value: string) {
 function getFirstSentence(value: string) {
   const firstParagraph = getFirstParagraph(value);
   const sentenceEnd = firstParagraph.search(/[.!?](?:\s|$)/);
-
   if (sentenceEnd === -1) {
     return firstParagraph;
   }
-
   return firstParagraph.slice(0, sentenceEnd + 1);
 }
 
@@ -269,11 +259,9 @@ export function withIssueTriageBotIntro(body?: string) {
   if (!trimmed) {
     return undefined;
   }
-
   if (hasIssueTriageBotIntro(trimmed)) {
     return trimmed;
   }
-
   return `${TRIAGE_BOT_INTRO}\n\n${trimmed}`;
 }
 
@@ -796,24 +784,8 @@ export async function prepareRepository() {
   };
 }
 
-export default async function ({ init, payload }: FlueContext) {
-  const { issueNumber, repository } = v.parse(payloadSchema, payload);
-  if (!process.env.OPENAI_API_KEY && process.env.FLUE_OPENAI_API_KEY) {
-    process.env.OPENAI_API_KEY = process.env.FLUE_OPENAI_API_KEY;
-  }
-
-  const agent = await init({
-    sandbox: "local",
-    model: process.env.FLUE_TRIAGE_MODEL || "openai/gpt-5.5",
-  });
-  const session = await agent.session();
-  enableEncryptedReasoning(session);
-
-  const initialContext = await readIssueContext(
-    session,
-    issueNumber,
-    repository,
-  );
+async function runTriage(session: FlueSession, issueNumber: number, repository?: string) {
+  const initialContext = await readIssueContext(session, issueNumber, repository);
   let duplicateSearch: DuplicateSearch;
   try {
     duplicateSearch = await session.skill("issue-triage", {
@@ -994,4 +966,33 @@ export default async function ({ init, payload }: FlueContext) {
     needs_human_review: update.needs_human_review,
     summary: update.summary,
   };
+}
+
+export default async function ({ init, payload }: FlueContext) {
+  const { issueNumber, repository } = v.parse(payloadSchema, payload);
+  if (!process.env.OPENAI_API_KEY && process.env.FLUE_OPENAI_API_KEY) {
+    process.env.OPENAI_API_KEY = process.env.FLUE_OPENAI_API_KEY;
+  }
+
+  const agent = await init({
+    sandbox: "local",
+    model: process.env.FLUE_TRIAGE_MODEL || "openai/gpt-5.5",
+  });
+  const session = await agent.session();
+  enableEncryptedReasoning(session);
+
+  try {
+    return await runTriage(session, issueNumber, repository);
+  } catch (error) {
+    const summary = `Automated triage failed: ${summarizeAgentFailure(error)}`;
+    console.warn(`[issue-triage] ${summary}`);
+    return {
+      outcome: "needs_human_review",
+      steps: [{ name: "triage", result: summary }],
+      labels_applied: [],
+      comment_posted: false,
+      needs_human_review: true,
+      summary,
+    };
+  }
 }
