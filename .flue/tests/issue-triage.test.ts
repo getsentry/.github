@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { mkdtemp, rm } from "node:fs/promises";
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import type { FlueSession } from "@flue/sdk/client";
@@ -379,5 +380,19 @@ describe("repository preparation", () => {
 
     assert.equal(result.checkoutAvailable, false);
     assert.equal(result.repoPath, null);
+  });
+
+  it("reports unavailable when the prepared checkout is not a git checkout", async () => {
+    const repoPath = await mkdtemp(join(tmpdir(), "empty-flue-checkout-"));
+    process.env.FLUE_TARGET_REPO_PATH = repoPath;
+
+    try {
+      const result = await prepareRepository();
+
+      assert.equal(result.checkoutAvailable, false);
+      assert.equal(result.repoPath, null);
+    } finally {
+      await rm(repoPath, { recursive: true, force: true });
+    }
   });
 });

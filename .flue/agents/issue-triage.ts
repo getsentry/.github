@@ -138,10 +138,7 @@ const gh = defineCommand("gh", {
 });
 const readGhToken = process.env.FLUE_READ_GH_TOKEN ?? "";
 const readOnlyGh = defineCommand("gh", {
-  env: {
-    GH_TOKEN: readGhToken,
-    GITHUB_TOKEN: readGhToken,
-  },
+  env: { GH_TOKEN: readGhToken, GITHUB_TOKEN: readGhToken },
 });
 
 // pi-ai currently replays OpenAI Responses reasoning IDs with store=false.
@@ -780,11 +777,14 @@ export async function prepareRepository() {
     };
   }
 
-  if (!(await isDirectory(repoPath))) {
+  if (
+    !(await isDirectory(repoPath)) ||
+    !(await isDirectory(join(repoPath, ".git")))
+  ) {
     return {
       checkoutAvailable: false,
       repoPath: null,
-      checkoutNote: `Target repository path is not available: ${repoPath}`,
+      checkoutNote: `Target repository checkout is not available: ${repoPath}`,
     };
   }
 
