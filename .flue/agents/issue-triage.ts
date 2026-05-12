@@ -304,7 +304,7 @@ export function validateDuplicateForAutomaticClosure(
     return "candidate URL did not identify a same-repo GitHub issue";
   }
 
-  if (reference.repository !== currentRepository) {
+  if (reference.repository.toLowerCase() !== currentRepository.toLowerCase()) {
     return `cross-repo candidate from ${reference.repository}`;
   }
 

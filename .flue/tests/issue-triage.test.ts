@@ -218,6 +218,13 @@ describe("duplicate closure", () => {
     assert.equal(
       validateDuplicateForAutomaticClosure(100, "getsentry/sentry-mcp", {
         ...duplicate,
+        url: "https://github.com/GetSentry/sentry-mcp/issues/950",
+      }),
+      null,
+    );
+    assert.equal(
+      validateDuplicateForAutomaticClosure(100, "getsentry/sentry-mcp", {
+        ...duplicate,
         confidence: "medium",
       }),
       "candidate confidence was medium",
