@@ -44,9 +44,9 @@ const duplicateCandidateSchema = v.object({
   reason: v.string(),
 });
 
-const duplicateSearchSchema = v.object({
+export const duplicateSearchSchema = v.object({
   status: v.picklist(["duplicate", "unique", "uncertain"]),
-  duplicate: v.optional(duplicateCandidateSchema),
+  duplicate: v.nullish(duplicateCandidateSchema),
   candidates: v.array(duplicateCandidateSchema),
   rationale: v.string(),
 });

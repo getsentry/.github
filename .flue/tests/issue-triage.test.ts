@@ -4,12 +4,14 @@ import { mkdtemp, rm } from "node:fs/promises";
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import type { FlueContext, FlueSession } from "@flue/sdk/client";
+import * as v from "valibot";
 
 import issueTriageAgent, {
   applyTriageUpdate,
   buildDuplicateClosureComment,
   buildDuplicateCloseArgs,
   buildNotPlannedCloseArgs,
+  duplicateSearchSchema,
   hasCloseReason,
   hasDuplicateReason,
   hasDuplicateOfFlag,
@@ -57,6 +59,19 @@ describe("issue triage comments", () => {
       ":wave: I'm Sentry Intern, the issue triage bot.\n\nI cleaned this up for maintainers.";
 
     assert.equal(withIssueTriageBotIntro(body), body);
+  });
+});
+
+describe("duplicate search schema", () => {
+  it("accepts null duplicate values from model JSON", () => {
+    const result = v.parse(duplicateSearchSchema, {
+      status: "unique",
+      duplicate: null,
+      candidates: [],
+      rationale: "No matching issue found.",
+    });
+
+    assert.equal(result.duplicate, null);
   });
 });
 
