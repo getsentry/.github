@@ -14,7 +14,6 @@ import issueTriageAgent, {
   hasDuplicateReason,
   hasDuplicateOfFlag,
   hasNotPlannedReason,
-  hasIssueTriageBotIntro,
   issueReferenceFromUrl,
   issueRepositoryFromIssue,
   issueRepositoryFromUrl,
@@ -53,34 +52,11 @@ describe("issue triage comments", () => {
     );
   });
 
-  it("accepts varied wording when the first sentence identifies the bot", () => {
+  it("does not duplicate the fixed issue triage bot greeting", () => {
     const body =
-      "Hello, I'm Sentry Intern, your triage bot.\n\nI cleaned this up for maintainers.";
+      ":wave: I'm Sentry Intern, the issue triage bot.\n\nI cleaned this up for maintainers.";
 
-    assert.equal(hasIssueTriageBotIntro(body), true);
     assert.equal(withIssueTriageBotIntro(body), body);
-  });
-
-  it("prepends the greeting when the persona is missing", () => {
-    const body =
-      "Hello, I'm the issue triage bot.\n\nI cleaned this up for maintainers.";
-
-    assert.equal(hasIssueTriageBotIntro(body), false);
-    assert.match(
-      withIssueTriageBotIntro(body) ?? "",
-      /^:wave: I'm Sentry Intern/,
-    );
-  });
-
-  it("prepends the greeting when only a later sentence identifies the bot", () => {
-    const body =
-      "Thanks for the report. I'm Sentry Intern, the issue triage bot, and found a duplicate.";
-
-    assert.equal(hasIssueTriageBotIntro(body), false);
-    assert.match(
-      withIssueTriageBotIntro(body) ?? "",
-      /^:wave: I'm Sentry Intern/,
-    );
   });
 });
 

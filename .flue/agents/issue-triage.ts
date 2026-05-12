@@ -222,33 +222,12 @@ function findDuplicateLabel(context: IssueContext) {
 export const TRIAGE_BOT_INTRO =
   ":wave: I'm Sentry Intern, the issue triage bot.";
 
-function getFirstParagraph(value: string) {
-  return value.trim().split(/\n\s*\n/, 1)[0] ?? "";
-}
-
-function getFirstSentence(value: string) {
-  const firstParagraph = getFirstParagraph(value);
-  const sentenceEnd = firstParagraph.search(/[.!?](?:\s|$)/);
-  if (sentenceEnd === -1) {
-    return firstParagraph;
-  }
-  return firstParagraph.slice(0, sentenceEnd + 1);
-}
-
-export function hasIssueTriageBotIntro(body: string) {
-  const firstSentence = getFirstSentence(body);
-  return (
-    /\bSentry\s+Intern\b/i.test(firstSentence) &&
-    /\b(?:issue\s+)?triage bot\b/i.test(firstSentence)
-  );
-}
-
 export function withIssueTriageBotIntro(body?: string) {
   const trimmed = body?.trim();
   if (!trimmed) {
     return undefined;
   }
-  if (hasIssueTriageBotIntro(trimmed)) {
+  if (trimmed.startsWith(TRIAGE_BOT_INTRO)) {
     return trimmed;
   }
   return `${TRIAGE_BOT_INTRO}\n\n${trimmed}`;
