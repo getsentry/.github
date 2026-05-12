@@ -11,7 +11,6 @@ on:
         description: Repository in owner/name form.
         required: true
         type: string
-        default: getsentry/sentry-mcp
       target-ref:
         description: Optional target repository ref to inspect.
         required: false

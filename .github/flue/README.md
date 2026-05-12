@@ -41,11 +41,14 @@ repository for smoke testing.
 
 ## Configuration
 
-Required organization configuration:
+Required GitHub organization secrets:
 
-- `FLUE_CLIENT_ID` variable for the Sentry Intern GitHub App.
 - `FLUE_PRIVATE_KEY` secret for the Sentry Intern GitHub App.
 - `FLUE_OPENAI_API_KEY` secret for the model provider.
+
+Required GitHub organization variables:
+
+- `FLUE_CLIENT_ID` variable for the Sentry Intern GitHub App.
 
 Sentry Intern needs `Contents: read` and `Issues: read and write` repository
 permissions. Source checkout uses the app's read token.
