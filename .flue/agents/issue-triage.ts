@@ -81,37 +81,26 @@ type TriageUpdateResult = {
   summary: string;
 };
 
-export function summarizeAgentFailure(error: unknown) {
+const TRIAGE_FAILURE_MESSAGE =
+  "The triage workflow failed before producing structured output.";
+
+function safeFailureMessage(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
   if (message.includes("Installed gh CLI cannot close issues")) {
     return message;
   }
-  if (
-    (message.includes("--duplicate-of") || message.includes("--reason")) &&
-    (message.includes("unknown flag") ||
-      message.includes("invalid argument") ||
-      message.includes("invalid value"))
-  ) {
-    return "The installed gh CLI does not support the issue close options this workflow needs.";
-  }
-  if (message.includes("404 status code")) {
-    return "The triage model returned a provider error before producing structured output.";
-  }
-  if (message.includes("Gateway Timeout")) {
-    return "The triage model timed out before producing structured output.";
-  }
-  return "The triage workflow failed before producing structured output.";
+  return TRIAGE_FAILURE_MESSAGE;
 }
 
-function buildDuplicateSearchFailure(error: unknown): DuplicateSearch {
+function buildDuplicateSearchFailure(): DuplicateSearch {
   return {
     status: "uncertain",
     candidates: [],
-    rationale: summarizeAgentFailure(error),
+    rationale: TRIAGE_FAILURE_MESSAGE,
   };
 }
 
-function buildDiagnosisFailure(error: unknown): Diagnosis {
+function buildDiagnosisFailure(): Diagnosis {
   return {
     severity: "low",
     category: "unknown",
@@ -119,7 +108,7 @@ function buildDiagnosisFailure(error: unknown): Diagnosis {
     validity: "unclear",
     summary:
       "Automated triage could not complete, so the issue is left unchanged for maintainer review.",
-    evidence: [summarizeAgentFailure(error)],
+    evidence: [TRIAGE_FAILURE_MESSAGE],
     labels_to_apply: [],
     should_comment: false,
     needs_human_review: true,
@@ -593,8 +582,8 @@ async function closeDuplicate(
       );
     }
   } catch (error) {
-    const summary = `Closing duplicate issue failed: ${summarizeAgentFailure(error)}`;
-    failureSummary = failureSummary ? `${failureSummary}; ${summary}` : summary;
+    const summary = `Closing duplicate issue failed: ${safeFailureMessage(error)}`;
+    failureSummary = summary;
     console.warn(`[issue-triage] ${summary}`);
 
     return {
@@ -610,7 +599,7 @@ async function closeDuplicate(
     try {
       labelsApplied = await applyLabels(session, context, [duplicateLabel]);
     } catch (error) {
-      failureSummary = `Applying duplicate label failed: ${summarizeAgentFailure(error)}`;
+      failureSummary = `Applying duplicate label failed: ${safeFailureMessage(error)}`;
       console.warn(`[issue-triage] ${failureSummary}`);
     }
   }
@@ -618,7 +607,7 @@ async function closeDuplicate(
   try {
     commentPosted = await postComment(session, context, comment);
   } catch (error) {
-    const summary = `Posting duplicate closure comment failed: ${summarizeAgentFailure(error)}`;
+    const summary = `Posting duplicate closure comment failed: ${safeFailureMessage(error)}`;
     failureSummary = failureSummary ? `${failureSummary}; ${summary}` : summary;
     console.warn(`[issue-triage] ${summary}`);
   }
@@ -679,7 +668,7 @@ export async function applyTriageUpdate(
       diagnosis.labels_to_apply,
     );
   } catch (error) {
-    const summary = `Applying issue labels failed: ${summarizeAgentFailure(error)}`;
+    const summary = `Applying issue labels failed: ${safeFailureMessage(error)}`;
     failureSummaries.push(summary);
     console.warn(`[issue-triage] ${summary}`);
   }
@@ -689,7 +678,7 @@ export async function applyTriageUpdate(
     try {
       commentPosted = await postComment(session, context, comment);
     } catch (error) {
-      const summary = `Posting issue comment failed: ${summarizeAgentFailure(error)}`;
+      const summary = `Posting issue comment failed: ${safeFailureMessage(error)}`;
       failureSummaries.push(summary);
       console.warn(`[issue-triage] ${summary}`);
     }
@@ -798,9 +787,9 @@ async function runTriage(session: FlueSession, issueNumber: number, repository?:
     });
   } catch (error) {
     console.warn(
-      `[issue-triage] Duplicate search failed: ${summarizeAgentFailure(error)}`,
+      `[issue-triage] Duplicate search failed: ${safeFailureMessage(error)}`,
     );
-    duplicateSearch = buildDuplicateSearchFailure(error);
+    duplicateSearch = buildDuplicateSearchFailure();
   }
 
   if (duplicateSearch.status === "duplicate") {
@@ -851,7 +840,7 @@ async function runTriage(session: FlueSession, issueNumber: number, repository?:
         currentRepository,
       );
     } catch (error) {
-      const failureSummary = `Canonical duplicate lookup failed: ${summarizeAgentFailure(error)}`;
+      const failureSummary = `Canonical duplicate lookup failed: ${safeFailureMessage(error)}`;
       console.warn(`[issue-triage] ${failureSummary}`);
       return {
         outcome: "needs_human_review",
@@ -931,9 +920,9 @@ async function runTriage(session: FlueSession, issueNumber: number, repository?:
     });
   } catch (error) {
     console.warn(
-      `[issue-triage] Diagnosis failed: ${summarizeAgentFailure(error)}`,
+      `[issue-triage] Diagnosis failed: ${safeFailureMessage(error)}`,
     );
-    diagnosis = buildDiagnosisFailure(error);
+    diagnosis = buildDiagnosisFailure();
   }
 
   const updateContext = await readIssueContext(
@@ -981,7 +970,7 @@ export default async function ({ init, payload }: FlueContext) {
   try {
     return await runTriage(session, issueNumber, repository);
   } catch (error) {
-    const summary = `Automated triage failed: ${summarizeAgentFailure(error)}`;
+    const summary = `Automated triage failed: ${safeFailureMessage(error)}`;
     console.warn(`[issue-triage] ${summary}`);
     return {
       outcome: "needs_human_review",

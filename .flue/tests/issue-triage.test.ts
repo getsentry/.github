@@ -19,7 +19,6 @@ import issueTriageAgent, {
   issueRepositoryFromIssue,
   issueRepositoryFromUrl,
   prepareRepository,
-  summarizeAgentFailure,
   validateDuplicateForAutomaticClosure,
   wasClosedAsNotPlanned,
   withIssueTriageBotIntro,
@@ -86,19 +85,6 @@ describe("issue triage comments", () => {
 });
 
 describe("duplicate closure", () => {
-  it("keeps gh close capability errors out of the model-failure bucket", () => {
-    assert.equal(
-      summarizeAgentFailure(
-        new Error("Installed gh CLI cannot close issues as duplicates."),
-      ),
-      "Installed gh CLI cannot close issues as duplicates.",
-    );
-    assert.equal(
-      summarizeAgentFailure(new Error("unknown flag: --duplicate-of")),
-      "The installed gh CLI does not support the issue close options this workflow needs.",
-    );
-  });
-
   it("inherits not planned when the canonical issue was closed as wontfix", () => {
     assert.equal(
       wasClosedAsNotPlanned({
