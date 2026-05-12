@@ -115,15 +115,25 @@ function buildDiagnosisFailure(): Diagnosis {
   };
 }
 
-const gh = defineCommand("gh", {
-  env: {
-    GH_TOKEN: process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN,
-  },
-});
-const readGhToken = process.env.FLUE_READ_GH_TOKEN ?? "";
-const readOnlyGh = defineCommand("gh", {
-  env: { GH_TOKEN: readGhToken, GITHUB_TOKEN: readGhToken },
-});
+type GhCommand = ReturnType<typeof defineCommand>;
+
+function writeGhCommand() {
+  return defineCommand("gh", {
+    env: {
+      GH_TOKEN: process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN,
+    },
+  });
+}
+
+function readOnlyGhCommand() {
+  const token = process.env.FLUE_READ_GH_TOKEN;
+  if (!token) {
+    throw new Error("FLUE_READ_GH_TOKEN is required for read-only gh commands.");
+  }
+  return defineCommand("gh", {
+    env: { GH_TOKEN: token, GITHUB_TOKEN: token },
+  });
+}
 
 // pi-ai currently replays OpenAI Responses reasoning IDs with store=false.
 // Inline encrypted reasoning until Flue/pi-ai expose this cleanly.
@@ -334,7 +344,7 @@ async function readJsonCommand(
   session: FlueSession,
   command: string,
   description: string,
-  commandDef: typeof gh = readOnlyGh,
+  commandDef: GhCommand = readOnlyGhCommand(),
 ) {
   const result = await session.shell(command, {
     commands: [commandDef],
@@ -361,7 +371,7 @@ async function runGhCommand(
   description: string,
 ) {
   const result = await session.shell(command, {
-    commands: [gh],
+    commands: [writeGhCommand()],
     timeout: 60_000,
   });
 
@@ -422,7 +432,7 @@ async function getIssueCloseHelpText(session: FlueSession) {
   }
 
   const result = await session.shell("gh issue close --help", {
-    commands: [gh],
+    commands: [writeGhCommand()],
     timeout: 60_000,
   });
   if (result.exitCode !== 0) {
@@ -760,7 +770,7 @@ async function runTriage(session: FlueSession, issueNumber: number, repository?:
         repository,
         context: initialContext,
       },
-      commands: [readOnlyGh],
+      commands: [readOnlyGhCommand()],
       result: duplicateSearchSchema,
       timeout: 300_000,
     });
@@ -893,7 +903,7 @@ async function runTriage(session: FlueSession, issueNumber: number, repository?:
         repositoryContext,
         duplicateSearch,
       },
-      commands: [readOnlyGh],
+      commands: [readOnlyGhCommand()],
       result: diagnosisSchema,
       timeout: 900_000,
     });

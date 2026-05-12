@@ -75,15 +75,19 @@ jobs:
             echo "Invalid repository: $TARGET_REPOSITORY" >&2
             exit 2
           fi
+          owner="${owner,,}"
+          name="${name,,}"
+          repository="$owner/$name"
+          caller_repository="${CALLER_REPOSITORY,,}"
           if [ "$owner" != "$EXPECTED_OWNER" ]; then
             echo "Repository must belong to $EXPECTED_OWNER: $TARGET_REPOSITORY" >&2
             exit 2
           fi
-          if [[ " $ENABLED_REPOSITORIES " != *" $owner/$name "* ]]; then
-            echo "Issue triage is not enabled for $owner/$name" >&2
+          if [[ " $ENABLED_REPOSITORIES " != *" $repository "* ]]; then
+            echo "Issue triage is not enabled for $repository" >&2
             exit 1
           fi
-          if [ "$EVENT_NAME" = "workflow_call" ] && [ "$TARGET_REPOSITORY" != "$CALLER_REPOSITORY" ]; then
+          if [ "$EVENT_NAME" = "workflow_call" ] && [ "$repository" != "$caller_repository" ]; then
             echo "Reusable workflow caller must target itself: $CALLER_REPOSITORY tried $TARGET_REPOSITORY" >&2
             exit 2
           fi
@@ -105,7 +109,7 @@ jobs:
           fi
           echo "owner=$owner" >> "$GITHUB_OUTPUT"
           echo "name=$name" >> "$GITHUB_OUTPUT"
-          echo "repository=$owner/$name" >> "$GITHUB_OUTPUT"
+          echo "repository=$repository" >> "$GITHUB_OUTPUT"
           echo "issue-number=$TARGET_ISSUE_NUMBER" >> "$GITHUB_OUTPUT"
           echo "target-ref=$TARGET_REF" >> "$GITHUB_OUTPUT"
           echo "automation-ref=$automation_ref" >> "$GITHUB_OUTPUT"
