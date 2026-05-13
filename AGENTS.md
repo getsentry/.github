@@ -6,7 +6,7 @@
 - Edit GitHub configuration under `.github/`; root files cover shared policies and metadata.
 
 ## Package Manager
-- Use `pnpm` for the Flue automation package; `pnpm-lock.yaml` is checked in.
+- No package manager, lockfile, or local build system is configured.
 
 ## File-Scoped Commands
 | Task | Command |
