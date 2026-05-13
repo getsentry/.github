@@ -69,7 +69,6 @@ jobs:
           TARGET_REF: ${{ inputs['target-ref'] }}
           AUTOMATION_REF: ${{ inputs['automation-ref'] }}
           EXPECTED_OWNER: getsentry
-          ENABLED_REPOSITORIES: getsentry/cli getsentry/dotagents getsentry/junior getsentry/sentry-mcp getsentry/vitest-evals getsentry/warden
           CALLER_REPOSITORY: ${{ github.repository }}
           EVENT_NAME: ${{ github.event_name }}
           WORKFLOW_REF_NAME: ${{ github.ref_name }}
@@ -91,10 +90,6 @@ jobs:
           if [ "$owner" != "$EXPECTED_OWNER" ]; then
             echo "Repository must belong to $EXPECTED_OWNER: $TARGET_REPOSITORY" >&2
             exit 2
-          fi
-          if [[ " $ENABLED_REPOSITORIES " != *" $repository "* ]]; then
-            echo "Issue triage is not enabled for $repository" >&2
-            exit 1
           fi
           if [ "$EVENT_NAME" = "workflow_call" ] && [ "$repository" != "$caller_repository" ]; then
             echo "Reusable workflow caller must target itself: $CALLER_REPOSITORY tried $TARGET_REPOSITORY" >&2
