@@ -681,8 +681,7 @@ export async function applyTriageUpdate(
   return {
     labels_applied: labelsApplied,
     comment_posted: commentPosted,
-    needs_human_review:
-      diagnosis.needs_human_review || failureSummaries.length > 0,
+    needs_human_review: failureSummaries.length > 0,
     summary:
       failureSummaries.length > 0
         ? `Issue update needs maintainer review: ${failureSummaries.join("; ")}`
