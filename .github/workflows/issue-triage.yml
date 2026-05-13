@@ -46,6 +46,7 @@ on:
 
 jobs:
   triage:
+    if: ${{ contains(' getsentry/cli getsentry/dotagents getsentry/junior getsentry/sentry-mcp getsentry/vitest-evals getsentry/warden ', format(' {0} ', inputs.repository)) }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
