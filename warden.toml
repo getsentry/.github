@@ -1,6 +1,8 @@
 version = 1
 
 [defaults]
+runtime = "pi"
+model = "anthropic/claude-sonnet-4-6"
 reportOn = "medium"
 failOn = "off"
 failCheck = false
