@@ -5,8 +5,18 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
+  check-permissions:
+    runs-on: ubuntu-latest
+    outputs:
+      HAS_SECRETS: ${{ steps.check.outputs.HAS_SECRETS }}
+    steps:
+      - run: echo "HAS_SECRETS=${{ secrets.WARDEN_PRIVATE_KEY != '' }}" >> "$GITHUB_OUTPUT"
+        id: check
+
   warden:
     runs-on: ubuntu-latest
+    needs: check-permissions
+    if: ${{ needs.check-permissions.outputs.HAS_SECRETS == 'true' }}
     permissions:
         contents: read
         id-token: write
