@@ -52,7 +52,7 @@ jobs:
           owner: ${{ github.repository_owner }} # access to all repos, cause this is triggered on org level
 
       - name: Report
-        if: ${{ always() && steps.warden-analyze.outputs.findings-file != '' }}
+        if: ${{ always() && steps.warden-analyze.outputs.findings-file != '' && steps.app-token.outcome == 'success' }}
         uses: getsentry/warden@v0
         continue-on-error: true
         with:
