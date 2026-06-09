@@ -41,12 +41,21 @@ jobs:
           private-key: ${{ secrets.WARDEN_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }} # access to all repos, cause this is triggered on org level
 
-      - uses: getsentry/warden@v0
-        id: warden
-        continue-on-error: true # throw no error for now
+      - name: Analyze
+        id: warden-analyze
+        uses: getsentry/warden@v0
+        continue-on-error: true
         with:
-          github-token: ${{ steps.app-token.outputs.token }}
+          mode: analyze
           base-config-path: .warden-org/warden.toml
+
+      - name: Report
+        if: always() && steps.warden-analyze.outputs.findings-file != ''
+        uses: getsentry/warden@v0
+        with:
+          mode: report
+          findings-file: ${{ steps.warden-analyze.outputs.findings-file }}
+          github-token: ${{ steps.app-token.outputs.token }}
 
       - name: Authenticate to Google Cloud
         continue-on-error: true
@@ -57,9 +66,9 @@ jobs:
 
       - name: Rename findings file with timestamp
         id: rename-findings
-        if: always() && steps.warden.outputs.findings-file != ''
+        if: always() && steps.warden-analyze.outputs.findings-file != ''
         env:
-          FINDINGS_FILE: ${{ steps.warden.outputs.findings-file }}
+          FINDINGS_FILE: ${{ steps.warden-analyze.outputs.findings-file }}
         run: |
           DEST="$RUNNER_TEMP/$(date -u +%Y-%m-%dT%H%M%SZ).json"
           cp "$FINDINGS_FILE" "$DEST"
