@@ -59,6 +59,7 @@ jobs:
           mode: report
           findings-file: ${{ steps.warden-analyze.outputs.findings-file }}
           github-token: ${{ steps.app-token.outputs.token }}
+          base-config-path: .warden-org/warden.toml
 
       - name: Authenticate to Google Cloud
         if: ${{ always() && steps.warden-analyze.outputs.findings-file != '' }}
