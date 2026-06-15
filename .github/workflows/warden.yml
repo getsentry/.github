@@ -19,6 +19,7 @@ jobs:
     if: ${{ needs.check-permissions.outputs.HAS_SECRETS == 'true' }}
     permissions:
         contents: read
+        pull-requests: read
         id-token: write
     env:
       WARDEN_ANTHROPIC_API_KEY: ${{ secrets.WARDEN_ANTHROPIC_API_KEY }}
@@ -34,21 +35,33 @@ jobs:
           repository: ${{ github.repository_owner }}/.github
           path: .warden-org
 
+      - name: Analyze
+        id: warden-analyze
+        uses: getsentry/warden@v0
+        continue-on-error: true
+        with:
+          mode: analyze
+          base-config-path: .warden-org/warden.toml
+
       - uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
         id: app-token
+        if: ${{ always() && steps.warden-analyze.outputs.findings-file != '' }}
         with:
           app-id: ${{ secrets.WARDEN_APP_ID }}
           private-key: ${{ secrets.WARDEN_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }} # access to all repos, cause this is triggered on org level
 
-      - uses: getsentry/warden@v0
-        id: warden
-        continue-on-error: true # throw no error for now
+      - name: Report
+        if: ${{ always() && steps.warden-analyze.outputs.findings-file != '' && steps.app-token.outcome == 'success' }}
+        uses: getsentry/warden@v0
+        continue-on-error: true
         with:
+          mode: report
+          findings-file: ${{ steps.warden-analyze.outputs.findings-file }}
           github-token: ${{ steps.app-token.outputs.token }}
-          base-config-path: .warden-org/warden.toml
 
       - name: Authenticate to Google Cloud
+        if: ${{ always() && steps.warden-analyze.outputs.findings-file != '' }}
         continue-on-error: true
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
         with:
@@ -57,9 +70,9 @@ jobs:
 
       - name: Rename findings file with timestamp
         id: rename-findings
-        if: always() && steps.warden.outputs.findings-file != ''
+        if: ${{ always() && steps.warden-analyze.outputs.findings-file != '' }}
         env:
-          FINDINGS_FILE: ${{ steps.warden.outputs.findings-file }}
+          FINDINGS_FILE: ${{ steps.warden-analyze.outputs.findings-file }}
         run: |
           DEST="$RUNNER_TEMP/$(date -u +%Y-%m-%dT%H%M%SZ).json"
           cp "$FINDINGS_FILE" "$DEST"
@@ -68,7 +81,7 @@ jobs:
       - name: Upload findings to GCS
         continue-on-error: true
         uses: google-github-actions/upload-cloud-storage@c0f6160ff80057923ff50e5e567695cea181ec23 # v2
-        if: always() && steps.rename-findings.outputs.path != ''
+        if: ${{ always() && steps.rename-findings.outputs.path != '' }}
         with:
           path: ${{ steps.rename-findings.outputs.path }}
           destination: warden-logs/${{ github.repository }}
