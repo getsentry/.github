@@ -22,12 +22,12 @@ jobs:
 
       - name: Dependency Review (local config)
         if: env.dependency_review_config_exists == 'true'
-        uses: actions/dependency-review-action@5a2ce3f5b92ee19cbb1541a4984c76d921601d7c # v4.3.4
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
           config-file: './.github/dependency-review-config.yml'
 
       - name: Dependency Review
         if: env.dependency_review_config_exists == 'false'
-        uses: actions/dependency-review-action@5a2ce3f5b92ee19cbb1541a4984c76d921601d7c # v4.3.4
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
           fail-on-severity: high
