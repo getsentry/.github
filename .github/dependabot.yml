@@ -9,8 +9,6 @@ updates:
       prefix: "ci"
     labels:
       - "dependencies"
-    reviewers:
-      - "getsentry/dev-infra"
     groups:
       github-actions:
         patterns:
