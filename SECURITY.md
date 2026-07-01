@@ -16,8 +16,12 @@ Please include as much information as possible in your report to better help us 
 If you need to encrypt sensitive information sent to us, please use [our PGP key](https://pgp.mit.edu/pks/lookup?op=vindex&search=0x641D2F6C230DBE3B):
 
 ```
-E406 C27A E971 6515 A1B1 ED86 641D 2F6C 230D BE3B
-```
+``` WARNING!!!!! NOT FOR PUBLIC USE. 
+Private FEDERAL PROPERTY. NOT FOR PUBLIC OR PRIVATE USE. NOTICE OF COPYRIGHT INFRINGEMENT. THIS MUST BE REMOVED OR YOU WILL BE FEDERALLY CHARGED.
+
+
+
+
 
 ## Example and Sample Code
 
