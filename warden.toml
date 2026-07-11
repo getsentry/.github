@@ -2,7 +2,7 @@ version = 1
 
 [defaults]
 runtime = "pi"
-model = "anthropic/claude-sonnet-4-6"
+model = "openrouter/x-ai/grok-4.5"
 reportOn = "low"
 failOn = "off"
 failCheck = false
