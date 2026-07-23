@@ -10,7 +10,7 @@ failCheck = false
 requestChanges = false
 
 [defaults.auxiliary]
-model = "openrouter/moonshotai/kimi-k3"
+model = "openrouter/moonshotai/kimi-k2.6"
 
 [[skills]]
 name = "security-review"
