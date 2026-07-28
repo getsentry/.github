@@ -6,6 +6,7 @@ on:
 
 jobs:
   warden:
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     permissions:
         contents: read
@@ -19,20 +20,12 @@ jobs:
       - name: Check Warden credentials
         env:
           HAS_OPENROUTER_API_KEY: ${{ secrets.WARDEN_OPENROUTER_API_KEY != '' }}
-          IS_FORK: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
-          IS_DEPENDABOT: ${{ github.actor == 'dependabot[bot]' }}
         run: |
           if [[ "$HAS_OPENROUTER_API_KEY" == "true" ]]; then
             exit 0
           fi
 
-          if [[ "$IS_FORK" == "true" ]]; then
-            MESSAGE="Warden cannot review this fork pull request because GitHub withholds repository secrets from fork workflows."
-          elif [[ "$IS_DEPENDABOT" == "true" ]]; then
-            MESSAGE="Warden cannot review this Dependabot pull request because WARDEN_OPENROUTER_API_KEY is unavailable. Add it to the organization Dependabot secrets."
-          else
-            MESSAGE="Warden cannot review this pull request because WARDEN_OPENROUTER_API_KEY is unavailable. Add it to the organization Actions secrets."
-          fi
+          MESSAGE="Warden cannot review this pull request because WARDEN_OPENROUTER_API_KEY is unavailable. Add it to the organization Actions secrets."
 
           echo "::error::$MESSAGE"
           printf '## Warden unavailable\n\n%s\n' "$MESSAGE" >> "$GITHUB_STEP_SUMMARY"
