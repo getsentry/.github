@@ -2,7 +2,7 @@ version = 1
 
 [defaults]
 runtime = "pi"
-model = "openrouter/moonshotai/kimi-k3"
+model = "openrouter/x-ai/grok-4.5"
 effort = "max"
 reportOn = "low"
 failOn = "off"
