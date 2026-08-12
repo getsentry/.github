@@ -2,7 +2,7 @@ version = 1
 
 [defaults]
 runtime = "pi"
-model = "openrouter/x-ai/grok-4.5"
+model = "openrouter/x-ai/grok-4.6"
 effort = "max"
 reportOn = "low"
 failOn = "off"
