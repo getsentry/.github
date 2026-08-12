@@ -3,11 +3,35 @@ version = 1
 [defaults]
 runtime = "pi"
 model = "openrouter/x-ai/grok-4.5"
-effort = "max"
+effort = "high"
 reportOn = "low"
 failOn = "off"
 failCheck = false
 requestChanges = false
+# Skip low-signal paths for all skills. Security review still pays to analyze
+# files even when the skill prompt would not report findings on them.
+# Note: Warden globs do not expand brace patterns.
+ignorePaths = [
+  "**/*.md",
+  "**/*.mdx",
+  "**/docs/**",
+  "**/CHANGELOG*",
+  "**/README*",
+  "**/tests/**",
+  "**/test/**",
+  "**/__tests__/**",
+  "**/__mocks__/**",
+  "**/e2e/**",
+  "**/fixtures/**",
+  "**/*.test.*",
+  "**/*.spec.*",
+  "**/test_*.py",
+  "**/*_test.py",
+  "**/*_test.go",
+  "**/*.snap",
+  "**/migrations/meta/**",
+  "**/*_snapshot.json",
+]
 
 [defaults.auxiliary]
 model = "openrouter/moonshotai/kimi-k2.6"
