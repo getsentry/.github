@@ -14,7 +14,7 @@ jobs:
         id-token: write
     env:
       WARDEN_OPENROUTER_API_KEY: ${{ secrets.WARDEN_OPENROUTER_API_KEY }}
-      WARDEN_MODEL: ${{ secrets.WARDEN_MODEL }}
+      WARDEN_MODEL: openrouter/moonshotai/kimi-k3
       WARDEN_SENTRY_DSN: ${{ secrets.WARDEN_SENTRY_DSN }}
       WARDEN_SERVICE_URL: ${{ vars.WARDEN_SERVICE_URL }}
       WARDEN_SERVICE_TOKEN: ${{ secrets.WARDEN_SERVICE_TOKEN }}
