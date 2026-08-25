@@ -1,3 +1,4 @@
+# Organization-wide Warden configuration.
 version = 1
 
 [defaults]
