@@ -1,4 +1,5 @@
 # Organization-wide Warden configuration.
+# Shared workflows load this file as their base configuration.
 version = 1
 
 [defaults]
