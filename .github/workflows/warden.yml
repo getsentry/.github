@@ -1,8 +1,13 @@
 name: Warden
 
+# Update the concurrency group below if this workflow adds non-PR triggers.
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+
+concurrency:
+  group: ${{ github.workflow }}-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
   warden:
