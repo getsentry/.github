@@ -96,3 +96,4 @@ jobs:
         with:
           path: ${{ steps.rename-findings.outputs.path }}
           destination: warden-logs/${{ github.repository }}
+          process_gcloudignore: false
