@@ -31,6 +31,7 @@ ignorePaths = [
   "**/migrations/meta/**",
   "**/*_snapshot.json",
 ]
+incrementalApp = "sentry-warden"
 
 [defaults.agent]
 effort = "high"
