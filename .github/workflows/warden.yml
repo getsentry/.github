@@ -17,6 +17,7 @@ jobs:
         contents: read
         pull-requests: read
         id-token: write
+        checks: read
     env:
       WARDEN_OPENROUTER_API_KEY: ${{ secrets.WARDEN_OPENROUTER_API_KEY }}
       WARDEN_MODEL: ${{ secrets.WARDEN_MODEL }}
