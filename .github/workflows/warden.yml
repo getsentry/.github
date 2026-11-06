@@ -11,7 +11,11 @@ concurrency:
 
 jobs:
   warden:
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    # materialized-ops-sync PRs only mirror manifests generated from getsentry/ops
+    # PRs, which Warden already reviews there.
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'materialized-ops-sync[bot]'
     runs-on: ubuntu-latest
     permissions:
         contents: read
