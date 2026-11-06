@@ -11,7 +11,13 @@ concurrency:
 
 jobs:
   warden:
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    # Skip PRs opened by these apps. Only list apps whose PRs carry no human
+    # changes, since Warden won't review any commit on them.
+    # - materialized-ops-sync[bot]: mirrors manifests generated from
+    #   getsentry/ops PRs, which Warden already reviews there.
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      !contains(fromJSON('["materialized-ops-sync[bot]"]'), github.event.pull_request.user.login)
     runs-on: ubuntu-latest
     permissions:
         contents: read
