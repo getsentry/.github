@@ -30,8 +30,6 @@ ignorePaths = [
   "**/*.snap",
   "**/migrations/meta/**",
   "**/*_snapshot.json",
-  # Bundler lockfiles per Ruby/Rails version (e.g. gemfiles/ruby-3.3_rails-7.2.gemfile.lock).
-  # The built-in skip only covers Gemfile.lock.
   "**/*.gemfile.lock",
 ]
 incrementalApp = "sentry-warden"
