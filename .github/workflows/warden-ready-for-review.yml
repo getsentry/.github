@@ -1,0 +1,9 @@
+name: Warden - PR Ready for Review
+on:
+  pull_request:
+    types: [ready_for_review]
+jobs:
+  warden:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    uses: getsentry/.github/.github/workflows/warden.yml@main
+    secrets: inherit
