@@ -54,6 +54,12 @@ jobs:
           repository: ${{ github.repository_owner }}/.github
           path: .warden-org
 
+      - name: Require ready for review
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: .warden-org/.github/scripts/warden-require-ready.sh
+
       - name: Analyze
         id: warden-analyze
         uses: getsentry/warden@v0
