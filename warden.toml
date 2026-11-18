@@ -46,3 +46,11 @@ name = "security-review"
 [[skills.triggers]]
 type = "pull_request"
 actions = ["opened", "synchronize", "reopened"]
+
+
+[[skills]]
+name = "integrity-review"
+
+[[skills.triggers]]
+type = "pull_request"
+actions = ["opened", "synchronize", "reopened"]
