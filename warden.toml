@@ -30,6 +30,7 @@ ignorePaths = [
   "**/*.snap",
   "**/migrations/meta/**",
   "**/*_snapshot.json",
+  "**/*.gemfile.lock",
 ]
 incrementalApp = "sentry-warden"
 
