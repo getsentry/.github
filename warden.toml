@@ -31,6 +31,9 @@ ignorePaths = [
   "**/migrations/meta/**",
   "**/*_snapshot.json",
 ]
+# Skip hunks an earlier clean run on the PR already reviewed, so re-runs and
+# pushes after a PR is marked ready do not pay for the same code twice.
+incremental = true
 incrementalApp = "sentry-warden"
 
 [defaults.agent]
