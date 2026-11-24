@@ -31,6 +31,8 @@ ignorePaths = [
   "**/migrations/meta/**",
   "**/*_snapshot.json",
 ]
+# Review only hunks changed since the last clean run on the PR.
+incremental = true
 incrementalApp = "sentry-warden"
 
 [defaults.agent]
@@ -42,6 +44,8 @@ effort = "high"
 
 [[skills]]
 name = "security-review"
+# Re-review every hunk on every push.
+incremental = false
 
 [[skills.triggers]]
 type = "pull_request"
@@ -50,6 +54,8 @@ actions = ["opened", "synchronize", "reopened", "stacked"]
 
 [[skills]]
 name = "integrity-review"
+# Re-review every hunk on every push.
+incremental = false
 
 [[skills.triggers]]
 type = "pull_request"
