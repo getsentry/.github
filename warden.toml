@@ -30,6 +30,7 @@ ignorePaths = [
   "**/*.snap",
   "**/migrations/meta/**",
   "**/*_snapshot.json",
+  "**/*.gemfile.lock",
 ]
 # Review only hunks changed since the last clean run on the PR.
 incremental = true
